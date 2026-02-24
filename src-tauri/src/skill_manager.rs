@@ -217,6 +217,20 @@ pub fn get_skills_for_tool(tool_key: String) -> Result<Vec<LocalSkill>, String> 
 pub const CENTRAL_SKILLS_DIR: &str = ".xskill/skills";
 
 #[tauri::command]
+pub fn delete_skill(path: String) -> Result<(), String> {
+    let path = PathBuf::from(path);
+    if !path.exists() {
+        return Err("Path does not exist".to_string());
+    }
+    if path.is_file() {
+        fs::remove_file(path).map_err(|e| e.to_string())?;
+    } else {
+        fs::remove_dir_all(path).map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
+#[tauri::command]
 pub fn get_all_local_skills() -> Result<Vec<LocalSkill>, String> {
     let mut all_skills = Vec::new();
     let home = home_dir()?;

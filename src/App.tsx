@@ -1,66 +1,18 @@
 import { useState } from "react";
-import { invoke } from "@tauri-apps/api/core";
 import { Button } from "@/components/ui/button";
-import { Card, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Search, Settings, CloudDownload, BookOpen, Plus, RefreshCw, ScanSearch, Wrench, Box, Layers } from "lucide-react";
+import { Search, Settings, CloudDownload, BookOpen, Plus, RefreshCw, ScanSearch, Box, Layers } from "lucide-react";
 import { NewSkillDialog } from "@/components/NewSkillDialog";
 import { OnboardingDialog } from "@/components/OnboardingDialog";
 import { SkillConfigDialog } from "@/components/SkillConfigDialog";
 import { SettingsPage } from "@/components/SettingsPage";
 import { MarketplacePage } from "@/components/MarketplacePage";
 import { ProjectsPage } from "@/components/ProjectsPage";
-import { useAppStore, type LocalSkill, type Tool } from "@/hooks/useAppStore";
+import { useAppStore, type LocalSkill } from "@/hooks/useAppStore";
 import { SuitesPage } from "@/components/SuitesPage";
+import { SkillCard } from "@/components/SkillCard";
 
 type Page = "my-skills" | "marketplace" | "settings" | "projects" | "suites";
-
-function SyncButton({ skill, tools }: { skill: LocalSkill; tools: Tool[] }) {
-  const [open, setOpen] = useState(false);
-  const [syncing, setSyncing] = useState<string | null>(null);
-
-  const installedTools = tools.filter((t) => t.installed && t.key !== skill.tool_key);
-
-  const handleSync = async (targetKey: string) => {
-    setSyncing(targetKey);
-    try {
-      await invoke("sync_skill", {
-        skillDir: skill.path,
-        targetToolKeys: [targetKey],
-      });
-      setOpen(false);
-    } catch (err) {
-      alert(`Sync failed: ${err}`);
-    } finally {
-      setSyncing(null);
-    }
-  };
-
-  if (installedTools.length === 0) return null;
-
-  return (
-    <div className="relative">
-      <Button variant="outline" size="sm" onClick={() => setOpen((v) => !v)}>
-        Sync to…
-      </Button>
-      {open && (
-        <div className="absolute right-0 bottom-full mb-1 z-50 bg-popover border border-border rounded-md shadow-lg min-w-[160px] py-1">
-          {installedTools.map((t) => (
-            <button
-              key={t.key}
-              className="w-full text-left px-3 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground disabled:opacity-50"
-              disabled={syncing === t.key}
-              onClick={() => handleSync(t.key)}
-            >
-              {syncing === t.key ? "Syncing…" : t.display_name}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
 
 function App() {
   const { skills, tools, feeds, loadingSkills, persistFeeds, refreshSkills } = useAppStore();
@@ -78,9 +30,9 @@ function App() {
 
   const navItems: { id: Page; label: string; icon: React.ReactNode }[] = [
     { id: "my-skills", label: "My Skills", icon: <BookOpen className="mr-2 h-4 w-4" /> },
-    { id: "suites", label: "Suites", icon: <Layers className="mr-2 h-4 w-4" /> },
     { id: "projects", label: "Projects", icon: <Box className="mr-2 h-4 w-4" /> },
     { id: "marketplace", label: "Marketplace", icon: <CloudDownload className="mr-2 h-4 w-4" /> },
+    { id: "suites", label: "Suites", icon: <Layers className="mr-2 h-4 w-4" /> },
     { id: "settings", label: "Settings", icon: <Settings className="mr-2 h-4 w-4" /> },
   ];
 
@@ -162,14 +114,22 @@ function App() {
 
               {!loadingSkills && filteredSkills.length > 0 && (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {filteredSkills.map((skill) => (
-                    <SkillCard 
-                      key={`${skill.tool_key}-${skill.name}`} 
-                      skill={skill} 
-                      tools={tools}
-                      onConfigure={() => setConfiguringSkill(skill)}
-                    />
-                  ))}
+                  {filteredSkills.map((skill) => {
+                    const syncedTools = tools.filter(t => 
+                      skills.some(s => s.name === skill.name && s.tool_key === t.key)
+                    );
+                    
+                    return (
+                      <SkillCard
+                        key={`${skill.tool_key}-${skill.name}`}
+                        skill={skill}
+                        tools={tools}
+                        syncedTools={syncedTools}
+                        onConfigure={() => setConfiguringSkill(skill)}
+                        onRefresh={refreshSkills}
+                      />
+                    );
+                  })}
                 </div>
               )}
             </>
@@ -203,44 +163,12 @@ function App() {
         }}
       />
 
-      <SkillConfigDialog 
+      <SkillConfigDialog
         isOpen={!!configuringSkill}
         onClose={() => setConfiguringSkill(null)}
         skill={configuringSkill}
       />
     </div>
-  );
-}
-
-function SkillCard({ 
-  skill, 
-  tools,
-  onConfigure
-}: { 
-  skill: LocalSkill; 
-  tools: Tool[];
-  onConfigure: () => void;
-}) {
-  const toolLabel = tools.find((t) => t.key === skill.tool_key)?.display_name ?? skill.tool_key;
-
-  return (
-    <Card className="flex flex-col">
-      <CardHeader>
-        <div className="flex justify-between items-start gap-2">
-          <CardTitle className="text-lg leading-tight">{skill.name}</CardTitle>
-          <Badge variant="secondary" className="shrink-0 text-xs">
-            {toolLabel}
-          </Badge>
-        </div>
-        <CardDescription>{skill.description || "No description"}</CardDescription>
-      </CardHeader>
-      <CardFooter className="mt-auto pt-4 border-t border-border/50 flex justify-between">
-        <Button variant="ghost" size="sm" onClick={onConfigure}>
-          <Wrench className="mr-2 h-4 w-4" /> Config
-        </Button>
-        <SyncButton skill={skill} tools={tools} />
-      </CardFooter>
-    </Card>
   );
 }
 

@@ -13,9 +13,9 @@
     "windows": [
       {
         "title": "XSkill",
-        "width": 1024,
+        "width": 1280,
         "height": 768,
-        "minWidth": 1024,
+        "minWidth": 1280,
         "minHeight": 768,
         "resizable": true,
         "fullscreen": false

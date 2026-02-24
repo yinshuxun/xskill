@@ -28,6 +28,28 @@
   - **一键接管**：提供向导将散落在各处的 Skills 移动或复制到中心仓库统一管理。
 - **本地化存储**：所有配置和元数据存储在本地 SQLite 或 JSON 文件中，确保企业数据绝对安全。
 
+### 3.1.1 三层存储架构 (Three-Tier Storage Architecture)
+
+参考 `skills-hub` 竞品设计，XSkill 采用三层架构组织 Skill 的物理存储：
+
+| Tier | 路径（默认） | 说明 |
+|------|------------|------|
+| **Hub** | `~/.xskill/skills/` | 全局中心仓库，所有工具共享，是 Source of Truth |
+| **Agent** | `~/.cursor/skills/`, `~/.config/opencode/skills/`, etc. | 各 AI 工具的全局 Skills 目录 |
+| **Project** | `<project>/.cursor/skills/`, `<project>/.agent/skills/`, etc. | 单个项目内的 Skills |
+
+**操作语义：**
+- **Sync (Copy)**：从 Hub 复制到 Agent/Project 目录，独立副本，互不影响
+- **Sync (Link)**：从 Hub 创建 Symlink 到 Agent/Project 目录，Hub 修改即时生效
+- **Collect**：逆向将 Agent/Project 层的 Skill 归集到 Hub，统一管理
+
+**卡片 UI 设计（已实现）：**
+- Tier 指示器：用彩色 Badge 区分 Hub（蓝）、Agent（橙）、Project（紫）
+- Agent 徽章：展示该 Skill 已同步到哪些 AI 工具（16 个 Agent 图标，见 `docs/supported-agents.md`）
+- Sync 下拉菜单：Copy / Link 两种模式
+- Collect 按钮：将 Agent/Project 层 Skill 归集到 Hub
+
+
 ### 3.2 多 IDE 快捷同步 (IDE Integration)
 - **环境检测**：自动扫描 Mac 本地安装的 Vibe Coding 工具（支持 Cursor, OpenCode, Windsurf, Claude Desktop 等）。
 - **配置生成与注入 (Config Generation)**：

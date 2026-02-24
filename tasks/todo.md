@@ -60,6 +60,33 @@ This document tracks the development progress of XSkill.
 
 ---
 
+### 3.5 Skill Management Redesign (Three-Tier Architecture)
+*Goal: Align with skills-hub competitor — implement Hub/Agent/Project three-tier model and new card UI.*
+- [x] **Design Doc**: Create `docs/05_skill_management_redesign.md`.
+- [x] **Agent Icons**: Create `src/components/ui/icons.tsx` with 16 agent SVG icons.
+- [x] **New SkillCard**: Create `src/components/SkillCard.tsx` with Tier badge, Agent icon row, Sync dropdown (Copy/Link), Collect button.
+- [x] **Wire SkillCard into App**: Replace inline `SkillCard`/`SyncButton` in `App.tsx` with new component.
+- [x] **Docs update**: Update `docs/02_requirements.md` with three-tier architecture section.
+- [x] **Backend: Sync Link Mode**: Add symlink support to `suite_applier.rs` (`sync_skill` command, `link` mode).
+- [x] **Backend: Collect**: Add `skill_collect_to_hub` Tauri command — moves/copies a Skill to `~/.xskill/skills/`.
+- [x] **UI: Collect wired up**: Connect Collect button in `SkillCard.tsx` to the new backend command.
+
+
+### 3.6 Stability & Usability Enhancements (Completed) ✅
+*Goal: Fix critical bugs and improve user experience.*
+- [x] **Dependency Resolution**:
+    - [x] Fix Rust `edition 2024` conflicts (time-core, getrandom).
+    - [x] Downgrade `Cargo.lock` to v3 for compatibility.
+    - [x] Pin dependencies in `Cargo.toml` to support older rustc versions.
+- [x] **UI Polish**:
+    - [x] Move delete icon to the right of sync icon.
+    - [x] Add hover tooltips for all action buttons.
+    - [x] Optimize sync dropdown width.
+- [x] **Skill Management**:
+    - [x] Implement `delete_skill` backend command and UI integration.
+    - [x] Implement `install_skill_from_url` for direct GitHub import to Hub.
+    - [x] Update `lessons.md` with dependency resolution knowledge.
+
 ## Phase 4: Intelligence & Automation (Future)
 - [ ] **AI Search**: "Find me a skill to handle PDF files" -> recommends from Marketplace.
 - [ ] **Auto-Update**: Git pull for installed skills.

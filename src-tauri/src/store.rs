@@ -26,7 +26,7 @@ pub struct FeedEntry {
 
 #[tauri::command]
 pub fn load_skills(app: AppHandle) -> Result<Vec<Skill>, String> {
-    let store = app.store(STORE_PATH).map_err(|e| e.to_string())?;
+    let store = app.store(STORE_PATH);
     let skills: Vec<Skill> = store
         .get(KEY_SKILLS)
         .and_then(|v| serde_json::from_value(v).ok())
@@ -36,14 +36,14 @@ pub fn load_skills(app: AppHandle) -> Result<Vec<Skill>, String> {
 
 #[tauri::command]
 pub fn save_skills(app: AppHandle, skills: Vec<Skill>) -> Result<(), String> {
-    let store = app.store(STORE_PATH).map_err(|e| e.to_string())?;
+    let store = app.store(STORE_PATH);
     store.set(KEY_SKILLS, serde_json::to_value(&skills).map_err(|e| e.to_string())?);
     store.save().map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub fn load_feeds(app: AppHandle) -> Result<Vec<FeedEntry>, String> {
-    let store = app.store(STORE_PATH).map_err(|e| e.to_string())?;
+    let store = app.store(STORE_PATH);
     let feeds: Vec<FeedEntry> = store
         .get(KEY_FEEDS)
         .and_then(|v| serde_json::from_value(v).ok())
@@ -53,7 +53,7 @@ pub fn load_feeds(app: AppHandle) -> Result<Vec<FeedEntry>, String> {
 
 #[tauri::command]
 pub fn save_feeds(app: AppHandle, feeds: Vec<FeedEntry>) -> Result<(), String> {
-    let store = app.store(STORE_PATH).map_err(|e| e.to_string())?;
+    let store = app.store(STORE_PATH);
     store.set(KEY_FEEDS, serde_json::to_value(&feeds).map_err(|e| e.to_string())?);
     store.save().map_err(|e| e.to_string())
 }

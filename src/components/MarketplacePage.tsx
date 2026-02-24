@@ -88,18 +88,13 @@ export function MarketplacePage({ feeds }: MarketplacePageProps) {
       alert("Invalid GitHub URL. Must be like https://github.com/owner/repo");
       return;
     }
-    const repoName = match[2].replace(".git", "");
     
-    const targetDir = await open({ directory: true, multiple: false, title: "Choose install directory" });
-    if (!targetDir) return;
-
     setInstallingId(directUrl);
     try {
-      await invoke("clone_skill", {
+      const path = await invoke<string>("install_skill_from_url", {
         repoUrl: directUrl,
-        targetDir: `${targetDir}/${repoName}`,
       });
-      alert(`✅ "${repoName}" installed successfully!`);
+      alert(`✅ Installed successfully to Hub!\nPath: ${path}`);
       setDirectUrl("");
     } catch (err) {
       alert(`❌ Install failed: ${err}`);
