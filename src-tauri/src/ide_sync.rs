@@ -6,7 +6,7 @@ use std::path::PathBuf;
 use walkdir::WalkDir;
 
 fn tool_skills_dir(tool_key: &str) -> Option<PathBuf> {
-    let home = dirs::home_dir()?;
+    let home = crate::utils::get_home_dir()?;
     let subdir = match tool_key {
         "cursor"         => ".cursor/skills",
         "claude_code"    => ".claude/skills",
@@ -35,6 +35,11 @@ fn tool_skills_dir(tool_key: &str) -> Option<PathBuf> {
 }
 
 fn copy_dir_all(src: &PathBuf, dst: &PathBuf) -> Result<(), String> {
+    if dst.exists() || dst.is_symlink() {
+        fs::remove_file(dst)
+            .or_else(|_| fs::remove_dir_all(dst))
+            .map_err(|e| format!("Failed to remove existing target {}: {}", dst.display(), e))?;
+    }
     fs::create_dir_all(dst)
         .map_err(|e| format!("Failed to create dir {}: {}", dst.display(), e))?;
 
@@ -80,7 +85,7 @@ fn symlink_dir(src: &PathBuf, dst: &PathBuf) -> Result<(), String> {
 
 fn update_claude_desktop_config(skill_name: &str, _dest_path: &PathBuf) -> Result<(), String> {
     // Only works on macOS for now
-    let home = dirs::home_dir().ok_or("Could not find home dir")?;
+    let home = crate::utils::get_home_dir().ok_or("Could not find home dir")?;
     let config_path = home.join("Library/Application Support/Claude/claude_desktop_config.json");
     
     if !config_path.exists() {
@@ -94,7 +99,7 @@ fn update_claude_desktop_config(skill_name: &str, _dest_path: &PathBuf) -> Resul
     let mut json: Value = serde_json::from_str(&content).unwrap_or(serde_json::json!({}));
 
     // Get skill config
-    let skill_config = get_skill_config(skill_name.to_string())?;
+    let skill_config = get_skill_config(skill_name.to_string(), Some(_dest_path.to_string_lossy().to_string()))?;
     
     // Only update if we have a command configured
     if let Some(cmd) = skill_config.command {
@@ -151,6 +156,12 @@ pub fn sync_skill(
             None => errors.push(format!("Unknown tool key: {}", tool_key)),
             Some(skills_dir) => {
                 let dest = skills_dir.join(&skill_name);
+                if let (Ok(s), Ok(d)) = (fs::canonicalize(&src), fs::canonicalize(&dest)) {
+                    if s == d {
+                        written_paths.push(dest.to_string_lossy().to_string());
+                        continue;
+                    }
+                }
 
                 let result = if use_link {
                     #[cfg(unix)]
@@ -200,8 +211,13 @@ pub fn skill_collect_to_hub(skill_dir: String) -> Result<String, String> {
         .ok_or_else(|| format!("Invalid skill directory path: {}", skill_dir))?
         .to_string();
 
-    let home = dirs::home_dir().ok_or("Could not find home directory")?;
+    let home = crate::utils::get_home_dir().ok_or("Could not find home directory")?;
     let hub_dir = home.join(CENTRAL_SKILLS_DIR).join(&skill_name);
+    if let (Ok(s), Ok(h)) = (fs::canonicalize(&src), fs::canonicalize(&hub_dir)) {
+        if s == h {
+            return Ok(hub_dir.to_string_lossy().to_string());
+        }
+    }
 
     copy_dir_all(&src, &hub_dir).map_err(|e| e.to_string())?;
 

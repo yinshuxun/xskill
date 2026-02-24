@@ -3,7 +3,7 @@ use std::fs;
 use std::path::PathBuf;
 
 fn tool_skills_dir(tool_key: &str) -> Option<PathBuf> {
-    let home = dirs::home_dir()?;
+    let home = crate::utils::get_home_dir()?;
     if tool_key == "xskill" || tool_key == "local" {
         return Some(home.join(CENTRAL_SKILLS_DIR));
     }

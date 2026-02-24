@@ -15,48 +15,55 @@ pub struct GithubContent {
     pub encoding: Option<String>,
 }
 
+pub fn convert_github_url(url: &str) -> Option<String> {
+    if url.contains("raw.githubusercontent.com") {
+        Some(url.to_string())
+    } else if url.contains("github.com") && url.contains("/blob/") {
+        Some(url.replace("github.com", "raw.githubusercontent.com").replace("/blob/", "/"))
+    } else {
+        None
+    }
+}
+
 #[tauri::command]
 pub async fn fetch_github_file(url: String) -> Result<String, String> {
-    // 1. Handle raw.githubusercontent.com
-    if url.contains("raw.githubusercontent.com") {
-        let client = reqwest::Client::new();
-        let resp = client.get(&url)
-            .header(USER_AGENT, "xskill")
-            .send()
-            .await
-            .map_err(|e| e.to_string())?;
-            
-        if !resp.status().is_success() {
-            return Err(format!("Failed to fetch: {}", resp.status()));
-        }
+    let raw_url = convert_github_url(&url).ok_or("Unsupported URL format")?;
+
+    let client = reqwest::Client::builder().timeout(std::time::Duration::from_secs(10)).build().unwrap();
+    let resp = client.get(&raw_url)
+        .header(USER_AGENT, "xskill")
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
         
-        return resp.text().await.map_err(|e| e.to_string());
+    if !resp.status().is_success() {
+        return Err(format!("Failed to fetch: {}", resp.status()));
+    }
+    
+    resp.text().await.map_err(|e| e.to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_convert_github_url() {
+        let raw = "https://raw.githubusercontent.com/owner/repo/main/file.txt";
+        assert_eq!(convert_github_url(raw).unwrap(), raw);
+
+        let blob = "https://github.com/owner/repo/blob/main/file.txt";
+        let expected = "https://raw.githubusercontent.com/owner/repo/main/file.txt";
+        assert_eq!(convert_github_url(blob).unwrap(), expected);
+
+        let invalid = "https://google.com";
+        assert!(convert_github_url(invalid).is_none());
     }
 
-    // 2. Handle github.com blob URLs
-    // https://github.com/owner/repo/blob/branch/path/to/file
-    // -> https://raw.githubusercontent.com/owner/repo/branch/path/to/file
-    if url.contains("github.com") && url.contains("/blob/") {
-        let raw_url = url.replace("github.com", "raw.githubusercontent.com")
-                         .replace("/blob/", "/");
-        // Recursive call to handle the raw url
-        // Note: In async recursion we need Box::pin but here we can just reuse the logic
-        // or just call the same logic. Since it's not recursive in a loop, let's just copy-paste or restructure.
-        // Actually, let's just call the raw logic directly here to avoid recursion issues without async_recursion crate.
-        
-        let client = reqwest::Client::new();
-        let resp = client.get(&raw_url)
-            .header(USER_AGENT, "xskill")
-            .send()
-            .await
-            .map_err(|e| e.to_string())?;
-            
-        if !resp.status().is_success() {
-            return Err(format!("Failed to fetch: {}", resp.status()));
-        }
-        
-        return resp.text().await.map_err(|e| e.to_string());
+    #[tokio::test]
+    async fn test_fetch_github_file_invalid() {
+        let result = fetch_github_file("https://google.com".to_string()).await;
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), "Unsupported URL format");
     }
-
-    Err("Unsupported URL format".to_string())
 }

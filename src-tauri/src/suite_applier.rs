@@ -53,7 +53,7 @@ pub fn apply_suite(project_path: String, suite: Suite) -> Result<(), String> {
                 .map_err(|e| format!("Failed to create .cursor/skills directory: {}", e))?;
         }
 
-        let home = dirs::home_dir().ok_or("Could not find home directory")?;
+        let home = crate::utils::get_home_dir().ok_or("Could not find home directory")?;
         let central_skills_dir = home.join(CENTRAL_SKILLS_DIR);
 
         for skill_id in suite.loadout_skills {

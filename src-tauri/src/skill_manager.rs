@@ -52,7 +52,7 @@ pub fn tool_definitions() -> Vec<ToolDef> {
 }
 
 pub fn home_dir() -> Result<PathBuf, String> {
-    dirs::home_dir().ok_or_else(|| "Could not find home directory".to_string())
+    crate::utils::get_home_dir().ok_or_else(|| "Could not find home directory".to_string())
 }
 
 pub fn skills_dir_for_tool(def: &ToolDef) -> Result<PathBuf, String> {

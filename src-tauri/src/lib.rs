@@ -1,3 +1,5 @@
+pub mod utils;
+pub mod integration_tests;
 pub mod commands;
 pub mod config;
 pub mod config_manager;

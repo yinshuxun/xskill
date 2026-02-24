@@ -3,20 +3,19 @@ use std::process::Command;
 use crate::skill_manager::CENTRAL_SKILLS_DIR;
 use tauri::{Emitter, Window};
 
-#[tauri::command]
-pub async fn install_skill_from_url(window: Window, repo_url: String) -> Result<String, String> {
-    let home = dirs::home_dir().ok_or("Could not find home directory")?;
+pub async fn core_install_skill_from_url<F>(repo_url: &str, mut progress: F) -> Result<String, String>
+where
+    F: FnMut(String),
+{
+    let home = crate::utils::get_home_dir().ok_or("Could not find home directory")?;
     let hub_path = home.join(CENTRAL_SKILLS_DIR);
     
-    // Create hub directory if it doesn't exist
     if !hub_path.exists() {
         std::fs::create_dir_all(&hub_path).map_err(|e| e.to_string())?;
     }
     
-    window.emit("import-progress", "Analyzing repository URL...").map_err(|e| e.to_string())?;
+    progress("Analyzing repository URL...".to_string());
 
-    // Extract name from URL
-    // e.g. https://github.com/OthmanAdi/planning-with-files -> planning-with-files
     let name = repo_url.trim_end_matches('/').split('/').last()
         .ok_or("Invalid URL")?
         .trim_end_matches(".git");
@@ -32,31 +31,28 @@ pub async fn install_skill_from_url(window: Window, repo_url: String) -> Result<
         return Err(format!("Skill '{}' already exists in Hub", name));
     }
     
-    // Reuse clone_skill logic by calling it directly
-    clone_skill(window, repo_url, target_dir_str.clone()).await?;
+    core_clone_skill(repo_url, &target_dir_str, progress).await?;
     
     Ok(target_dir_str)
 }
 
-#[tauri::command]
-pub async fn clone_skill(window: Window, repo_url: String, target_dir: String) -> Result<(), String> {
-    let target_path = Path::new(&target_dir);
+pub async fn core_clone_skill<F>(repo_url: &str, target_dir: &str, mut progress: F) -> Result<(), String>
+where
+    F: FnMut(String),
+{
+    let target_path = Path::new(target_dir);
 
-    window.emit("import-progress", format!("Preparing directory: {}...", target_dir)).map_err(|e| e.to_string())?;
+    progress(format!("Preparing directory: {}...", target_dir));
 
     if let Some(parent) = target_path.parent() {
         std::fs::create_dir_all(parent)
             .map_err(|e| format!("Failed to create parent directory: {}", e))?;
     }
 
-    window.emit("import-progress", format!("Cloning {}...", repo_url)).map_err(|e| e.to_string())?;
-
-    // Use async-aware command execution if possible, but std::process::Command is blocking.
-    // In async tauri command, we should use tauri::async_runtime::spawn_blocking or similar if we want to be truly async non-blocking.
-    // However, just making the function async allows Tauri to schedule it on a thread pool, preventing main thread block.
+    progress(format!("Cloning {}...", repo_url));
     
     let output = Command::new("git")
-        .args(["clone", &repo_url, &target_dir])
+        .args(["clone", repo_url, target_dir])
         .output()
         .map_err(|e| format!("Failed to execute git clone: {}", e))?;
 
@@ -65,9 +61,23 @@ pub async fn clone_skill(window: Window, repo_url: String, target_dir: String) -
         return Err(format!("git clone failed: {}", stderr.trim()));
     }
 
-    window.emit("import-progress", "Clone successful!").map_err(|e| e.to_string())?;
+    progress("Clone successful!".to_string());
 
     Ok(())
+}
+
+#[tauri::command]
+pub async fn install_skill_from_url(window: Window, repo_url: String) -> Result<String, String> {
+    core_install_skill_from_url(&repo_url, |msg| {
+        let _ = window.emit("import-progress", msg);
+    }).await
+}
+
+#[tauri::command]
+pub async fn clone_skill(window: Window, repo_url: String, target_dir: String) -> Result<(), String> {
+    core_clone_skill(&repo_url, &target_dir, |msg| {
+        let _ = window.emit("import-progress", msg);
+    }).await
 }
 
 #[tauri::command]
@@ -75,10 +85,7 @@ pub async fn update_skill(skill_dir: String) -> Result<(), String> {
     let skill_path = Path::new(&skill_dir);
 
     if !skill_path.exists() {
-        return Err(format!(
-            "Directory does not exist: {}",
-            skill_dir
-        ));
+        return Err(format!("Directory does not exist: {}", skill_dir));
     }
 
     let output = Command::new("git")

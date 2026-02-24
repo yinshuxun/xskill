@@ -14,7 +14,7 @@ pub struct SkillConfig {
 }
 
 fn get_config_path() -> Result<PathBuf, String> {
-    let home = dirs::home_dir().ok_or("Could not find home directory")?;
+    let home = crate::utils::get_home_dir().ok_or("Could not find home directory")?;
     let config_dir = home.join(".xskill");
     if !config_dir.exists() {
         fs::create_dir_all(&config_dir).map_err(|e| e.to_string())?;
@@ -37,10 +37,7 @@ fn save_all_configs(configs: &HashMap<String, SkillConfig>) -> Result<(), String
     fs::write(&path, content).map_err(|e| e.to_string())
 }
 
-fn detect_default_config(skill_name: &str) -> Option<SkillConfig> {
-    let home = dirs::home_dir()?;
-    let skill_path = home.join(CENTRAL_SKILLS_DIR).join(skill_name);
-    
+pub fn detect_default_config(skill_path: &PathBuf) -> Option<SkillConfig> {
     if !skill_path.exists() {
         return None;
     }
@@ -54,14 +51,14 @@ fn detect_default_config(skill_name: &str) -> Option<SkillConfig> {
         let src_index_ts = skill_path.join("src/index.ts");
         
         let script_path = if build_index_js.exists() {
-            Some("build/index.js")
+            Some(build_index_js)
         } else if dist_index_js.exists() {
-             Some("dist/index.js")
+             Some(dist_index_js)
         } else if index_js.exists() {
-             Some("index.js")
+             Some(index_js)
         } else if src_index_ts.exists() {
              // If TS exists but no JS, they might need to run via npx ts-node, but let's assume index.js for now
-             Some("index.js") 
+             Some(index_js) 
         } else {
              None
         };
@@ -69,7 +66,7 @@ fn detect_default_config(skill_name: &str) -> Option<SkillConfig> {
         if let Some(script) = script_path {
             return Some(SkillConfig {
                 command: Some("node".to_string()),
-                args: Some(vec![skill_path.join(script).to_string_lossy().to_string()]),
+                args: Some(vec![script.to_string_lossy().to_string()]),
                 env: None,
             });
         }
@@ -81,9 +78,9 @@ fn detect_default_config(skill_name: &str) -> Option<SkillConfig> {
         let server_py = skill_path.join("server.py");
 
         let script_path = if main_py.exists() {
-            Some("main.py")
+            Some(main_py)
         } else if server_py.exists() {
-            Some("server.py")
+            Some(server_py)
         } else {
             None
         };
@@ -91,7 +88,7 @@ fn detect_default_config(skill_name: &str) -> Option<SkillConfig> {
         if let Some(script) = script_path {
             return Some(SkillConfig {
                 command: Some("python3".to_string()),
-                args: Some(vec![skill_path.join(script).to_string_lossy().to_string()]),
+                args: Some(vec![script.to_string_lossy().to_string()]),
                 env: None,
             });
         }
@@ -101,14 +98,19 @@ fn detect_default_config(skill_name: &str) -> Option<SkillConfig> {
 }
 
 #[tauri::command]
-pub fn get_skill_config(skill_name: String) -> Result<SkillConfig, String> {
+pub fn get_skill_config(skill_name: String, skill_path: Option<String>) -> Result<SkillConfig, String> {
     let configs = load_all_configs()?;
     if let Some(config) = configs.get(&skill_name) {
         return Ok(config.clone());
     }
     
     // Auto-detect if no config exists
-    Ok(detect_default_config(&skill_name).unwrap_or_default())
+    let path = skill_path.map(PathBuf::from).unwrap_or_else(|| {
+        let home = crate::utils::get_home_dir().unwrap_or_default();
+        home.join(CENTRAL_SKILLS_DIR).join(&skill_name)
+    });
+
+    Ok(detect_default_config(&path).unwrap_or_default())
 }
 
 #[tauri::command]
@@ -116,4 +118,36 @@ pub fn save_skill_config(skill_name: String, config: SkillConfig) -> Result<(), 
     let mut configs = load_all_configs()?;
     configs.insert(skill_name, config);
     save_all_configs(&configs)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tempfile::TempDir;
+
+    #[test]
+    fn test_detect_default_config_node() {
+        let temp_dir = TempDir::new().unwrap();
+        let path = temp_dir.path().to_path_buf();
+        
+        fs::write(path.join("package.json"), "{}").unwrap();
+        fs::write(path.join("index.js"), "console.log('test');").unwrap();
+
+        let config = detect_default_config(&path).unwrap();
+        assert_eq!(config.command.unwrap(), "node");
+        assert!(config.args.unwrap()[0].ends_with("index.js"));
+    }
+
+    #[test]
+    fn test_detect_default_config_python() {
+        let temp_dir = TempDir::new().unwrap();
+        let path = temp_dir.path().to_path_buf();
+        
+        fs::write(path.join("pyproject.toml"), "").unwrap();
+        fs::write(path.join("main.py"), "print('test')").unwrap();
+
+        let config = detect_default_config(&path).unwrap();
+        assert_eq!(config.command.unwrap(), "python3");
+        assert!(config.args.unwrap()[0].ends_with("main.py"));
+    }
 }

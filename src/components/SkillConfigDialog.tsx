@@ -50,6 +50,7 @@ export function SkillConfigDialog({
     try {
       const config = await invoke<SkillConfig>("get_skill_config", {
         skillName: skill.name,
+        skillPath: skill.path,
       });
       setCommand(config.command || "");
       setArgs(config.args || []);
@@ -82,6 +83,7 @@ export function SkillConfigDialog({
 
       await invoke("save_skill_config", {
         skillName: skill.name,
+        skillPath: skill.path,
         config,
       });
       onClose();

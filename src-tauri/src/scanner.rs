@@ -96,7 +96,7 @@ pub fn scan_workspace(extra_roots: Option<Vec<String>>) -> Result<Vec<Project>, 
     let mut roots = Vec::new();
     
     // Add default roots
-    if let Some(home) = dirs::home_dir() {
+    if let Some(home) = crate::utils::get_home_dir() {
         roots.push(home.join("workspace"));
         roots.push(home.join("projects"));
         roots.push(home.join("codes"));
@@ -111,4 +111,48 @@ pub fn scan_workspace(extra_roots: Option<Vec<String>>) -> Result<Vec<Project>, 
     }
 
     Ok(scan_roots(roots))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tempfile::TempDir;
+
+    #[test]
+    fn test_scan_roots() {
+        let temp_dir = TempDir::new().unwrap();
+        let base = temp_dir.path().join("workspace"); fs::create_dir_all(&base).unwrap();
+
+        // Project A: Normal project with .git
+        let proj_a = base.join("proj_a");
+        fs::create_dir_all(proj_a.join(".git")).unwrap();
+        fs::write(proj_a.join("AGENTS.md"), "rules").unwrap();
+
+        // Project B: MCP project with package.json
+        let proj_b = base.join("proj_b");
+        fs::create_dir_all(proj_b.join(".git")).unwrap();
+        fs::write(proj_b.join("package.json"), "{\"name\": \"test\", \"mcp\": {}}").unwrap();
+
+        // Project C: Ignored folder
+        let proj_c = base.join("node_modules");
+        fs::create_dir_all(proj_c.join(".git")).unwrap();
+
+        let roots = vec![base.to_path_buf()];
+        let mut results = scan_roots(roots);
+        results.sort_by(|a, b| a.name.cmp(&b.name));
+
+        // We expect only proj_a and proj_b to be in the final list
+        assert_eq!(results.len(), 2, "Should find proj_a and proj_b, skipping node_modules");
+
+        let res_a = results.iter().find(|p| p.name == "proj_a").unwrap();
+        let res_b = results.iter().find(|p| p.name == "proj_b").unwrap();
+
+        assert!(res_a.has_git);
+        assert!(res_a.has_agents_md);
+        assert!(!res_a.has_mcp);
+
+        assert!(res_b.has_git);
+        assert!(!res_b.has_agents_md);
+        assert!(res_b.has_mcp);
+    }
 }
