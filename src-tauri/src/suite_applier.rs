@@ -10,6 +10,12 @@ fn copy_dir_all(src: &PathBuf, dst: &PathBuf) -> Result<(), String> {
 
     for entry in WalkDir::new(src).min_depth(1) {
         let entry = entry.map_err(|e| format!("Walk error: {}", e))?;
+        
+        // Skip .git directories
+        if entry.path().components().any(|c| c.as_os_str() == ".git") {
+            continue;
+        }
+
         let relative = entry.path().strip_prefix(src)
             .map_err(|e| format!("Strip prefix error: {}", e))?;
         let dest_path = dst.join(relative);
