@@ -163,8 +163,7 @@ function SuiteEditor({
           <Label>Included Skills</Label>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2 border p-4 rounded-md max-h-[300px] overflow-y-auto">
              {availableSkills.map((skill) => {
-               // Fallback: use skill.name if skill.id is missing (from LocalSkill type)
-               const skillId = skill.id || skill.name;
+               const skillId = skill.name;
                const isSelected = (suite.loadout_skills || []).includes(skillId);
                return (
                  <div 
