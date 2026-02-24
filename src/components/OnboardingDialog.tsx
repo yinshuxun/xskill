@@ -96,7 +96,7 @@ export function OnboardingDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-3xl max-h-[80vh] flex flex-col">
+      <DialogContent className="max-w-3xl max-h-[80vh] flex flex-col overflow-hidden">
         <DialogHeader>
           <DialogTitle>Import Existing Skills</DialogTitle>
           <DialogDescription>
@@ -113,7 +113,7 @@ export function OnboardingDialog({
             </p>
           </div>
         ) : (
-          <div className="flex-1 flex flex-col min-h-0 gap-4">
+          <div className="flex-1 flex flex-col min-h-0 gap-4 overflow-hidden">
             <div className="flex items-center gap-4 px-1">
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Badge variant="outline" className="text-green-600 bg-green-50 border-green-200">
@@ -140,13 +140,13 @@ export function OnboardingDialog({
               </Tabs>
             </div>
 
-            <ScrollArea className="flex-1 border rounded-md p-4">
+            <ScrollArea className="flex-1 border rounded-md p-4 h-full">
               {skills.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
                   No external skills found.
                 </div>
               ) : (
-                <div className="space-y-3">
+                <div className="space-y-3 pb-2">
                   {skills.map((skill) => (
                     <div
                       key={skill.path}
@@ -195,7 +195,7 @@ export function OnboardingDialog({
           </div>
         )}
 
-        <DialogFooter className="gap-2 sm:gap-0">
+        <DialogFooter className="gap-2 sm:gap-0 pt-4">
           <div className="flex-1 text-xs text-muted-foreground flex items-center">
             {strategy === "copy"
               ? "Files will be duplicated to ~/.xskill/skills"

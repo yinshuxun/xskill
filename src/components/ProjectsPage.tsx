@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useAppStore } from "@/hooks/useAppStore";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { RefreshCw, FolderSearch, GitBranch, Box, FileText } from "lucide-react";

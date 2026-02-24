@@ -1,14 +1,14 @@
 {
   "name": "xskill",
   "private": true,
-  "version": "0.2.0",
+  "version": "0.2.2",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "tauri": "tauri"
+    "tauri": "RUSTUP_TOOLCHAIN=stable tauri"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.10.1",
