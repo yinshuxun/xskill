@@ -275,7 +275,7 @@ export function MarketplacePage() {
                             height={height}
                             rowCount={rowCount}
                             rowHeight={ROW_HEIGHT}
-                            width={width}
+                            width={width - 4}
                             itemData={currentItemData}
                             className="overflow-x-hidden"
                         >

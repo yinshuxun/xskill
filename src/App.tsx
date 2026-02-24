@@ -41,8 +41,8 @@ function App() {
         className="w-[280px] border-r border-border/40 bg-card/40 backdrop-blur-xl flex flex-col z-20 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]"
       >
         <div className="p-8 pb-6 flex items-center gap-3">
-          <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-emerald-500 to-violet-500 flex items-center justify-center shadow-lg shadow-primary/20">
-            <img src="/src/assets/app-icon.svg" className="h-full w-full object-cover rounded-lg" alt="logo" />
+          <div className="h-8 w-8 flex items-center justify-center">
+            <img src="/src/assets/app-icon.svg" className="h-full w-full object-contain drop-shadow-md" alt="logo" />
           </div>
           <h1 className="text-xl font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">XSkill</h1>
         </div>
