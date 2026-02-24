@@ -113,6 +113,7 @@ pub fn read_skills_from_dir(skills_dir: &PathBuf, tool_key: &str) -> Vec<LocalSk
     for entry in entries.flatten() {
         let path = entry.path();
         if path.is_dir() {
+            // Check for SKILL.md
             let skill_md_path = path.join("SKILL.md");
             if skill_md_path.exists() {
                 if let Ok(raw) = fs::read_to_string(&skill_md_path) {
@@ -130,6 +131,23 @@ pub fn read_skills_from_dir(skills_dir: &PathBuf, tool_key: &str) -> Vec<LocalSk
                         disable_model_invocation,
                         allowed_tools,
                         content,
+                    });
+                }
+            } else {
+                let dir_name = path.file_name()
+                    .and_then(|n| n.to_str())
+                    .unwrap_or("unknown")
+                    .to_string();
+                
+                if !dir_name.starts_with('.') {
+                     skills.push(LocalSkill {
+                        name: dir_name.clone(),
+                        description: format!("Imported from {}", tool_key),
+                        path: path.to_string_lossy().to_string(),
+                        tool_key: tool_key.to_string(),
+                        disable_model_invocation: false,
+                        allowed_tools: vec![],
+                        content: String::new(),
                     });
                 }
             }
@@ -200,12 +218,30 @@ pub const CENTRAL_SKILLS_DIR: &str = ".xskill/skills";
 
 #[tauri::command]
 pub fn get_all_local_skills() -> Result<Vec<LocalSkill>, String> {
+    let mut all_skills = Vec::new();
     let home = home_dir()?;
+
+    // 1. Read central skills
     let central_path = home.join(CENTRAL_SKILLS_DIR);
-    
-    if !central_path.exists() {
-        return Ok(Vec::new());
+    if central_path.exists() {
+        all_skills.extend(read_skills_from_dir(&central_path, "xskill"));
     }
 
-    Ok(read_skills_from_dir(&central_path, "xskill"))
+    // 2. Read skills from all other tools
+    let defs = tool_definitions();
+    for def in defs {
+        if let Ok(path) = skills_dir_for_tool(&def) {
+            if path.exists() {
+                // Read skills from tool directory
+                let tool_skills = read_skills_from_dir(&path, def.key);
+                all_skills.extend(tool_skills);
+            }
+        }
+    }
+
+    // Deduplicate by path
+    all_skills.sort_by(|a, b| a.path.cmp(&b.path));
+    all_skills.dedup_by(|a, b| a.path == b.path);
+
+    Ok(all_skills)
 }
