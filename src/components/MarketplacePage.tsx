@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { CloudDownload, RefreshCw, AlertCircle, Star, GitFork, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { FixedSizeGrid as Grid } from "react-window";
-import { AutoSizer } from "react-virtualized-auto-sizer";
+import AutoSizer from "react-virtualized-auto-sizer";
 
 interface MarketplaceSkill {
   id: string;
@@ -20,12 +20,6 @@ interface MarketplaceSkill {
   forks: number;
   updatedAt: number;
   tags?: string[];
-}
-
-interface FeedEntry {
-  id: string;
-  label: string;
-  url: string;
 }
 
 interface CellData {

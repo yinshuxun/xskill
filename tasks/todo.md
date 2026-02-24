@@ -43,8 +43,8 @@ This document tracks the development progress of XSkill.
 
 ### 3.3 UI/UX Redesign (The "X" Aesthetic)
 *Goal: Make it look cool, distinct, and professional.*
-- [ ] **Visual Identity**:
-    - [ ] **Icon**: Design new App Icon (Dark/Neon X style).
+- [x] **Visual Identity**:
+    - [x] **Icon**: Remove top-left icon per user request.
     - [ ] **Theme**: Switch to Dark Mode default with high-contrast accents.
 - [x] **New Views**:
     - [x] **Projects View**: List scanned projects.
@@ -87,24 +87,28 @@ This document tracks the development progress of XSkill.
     - [x] Implement `install_skill_from_url` for direct GitHub import to Hub.
     - [x] Update `lessons.md` with dependency resolution knowledge.
 
-## Phase 4: Intelligence & Automation (Future)
+---
+
+## Phase 4: v0.3.0 Iteration (Universal Agent Manager) ✅
+*Goal: Transform xskill into a Universal Agent Skill Manager with global sync and Hub architecture.*
+- [x] **Universal Agent Sync**:
+    - [x] Detect installed Agents (Cursor, Windsurf, Trae, VSCode) and their config paths.
+    - [x] Allow syncing Skills to Agent's Global Scope (e.g., `~/.cursor/rules`).
+- [x] **Symlink "Live" Mode**:
+    - [x] Add "Link (Live Update)" option in Apply/Sync dialog.
+    - [x] Implement backend symlink logic for cross-platform support.
+- [x] **Enhanced Hub Management**:
+    - [x] **Hub Page**: Master list view of all available skills.
+    - [x] **My Skills Page**: View installed skills grouped by Agent with badges.
+    - [x] **Marketplace**: JSON-based feed with Virtual Scroll and Search.
+- [x] **UI Polish**:
+    - [x] Remove top-left icon.
+    - [x] Version bump to 0.3.0.
+
+## Phase 5: Intelligence & Automation (Future)
 - [ ] **AI Search**: "Find me a skill to handle PDF files" -> recommends from Marketplace.
 - [ ] **Auto-Update**: Git pull for installed skills.
 - [ ] **System Tray**: Quick access from menu bar.
-
----
-
-## Phase 5: v0.3.0 Iteration (Universal Agent Manager) 🚀
-*Goal: Transform xskill into a Universal Agent Skill Manager with global sync and health checks.*
-- [ ] **Universal Agent Sync**:
-    - [ ] Detect installed Agents (Cursor, Windsurf, Trae, VSCode) and their config paths.
-    - [ ] Allow syncing Suites/Skills to Agent's Global Scope (e.g., `~/.cursor/rules`).
-- [ ] **Symlink "Live" Mode**:
-    - [ ] Add "Link (Live Update)" option in Apply/Sync dialog.
-    - [ ] Implement backend symlink logic for cross-platform support.
-- [ ] **Enhanced Hub Management**:
-    - [ ] Distinct UI for "Hub Source" vs "Installed Instance".
-    - [ ] "Eject" command to convert Symlink to Copy.
 - [ ] **E2E Verification & Health**:
     - [ ] **Health Check View**: Dashboard for agent installation status and path validity.
     - [ ] **Verify Command**: Automated check if a skill is correctly installed and accessible by the agent.

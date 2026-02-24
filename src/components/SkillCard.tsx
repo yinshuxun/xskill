@@ -10,6 +10,7 @@ import type { LocalSkill, Tool } from "@/hooks/useAppStore";
 export function SkillCard({ 
   skill, 
   tools,
+  syncedTools,
   onConfigure,
   onRefresh
 }: { 

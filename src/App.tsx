@@ -15,7 +15,7 @@ import { MySkillsPage } from "@/components/MySkillsPage";
 type Page = "hub" | "my-skills" | "marketplace" | "projects" | "suites";
 
 function App() {
-  const { skills, tools, feeds, loadingSkills, refreshSkills } = useAppStore();
+  const { skills, tools, loadingSkills, refreshSkills } = useAppStore();
   const [page, setPage] = useState<Page>("hub");
   const [searchQuery, setSearchQuery] = useState("");
   const [isNewSkillModalOpen, setIsNewSkillModalOpen] = useState(false);
@@ -109,7 +109,7 @@ function App() {
 
           {page === "projects" && <ProjectsPage />}
           
-          {page === "marketplace" && <MarketplacePage feeds={feeds} />}
+          {page === "marketplace" && <MarketplacePage />}
           
           {page === "suites" && <SuitesPage />}
         </main>
