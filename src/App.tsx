@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { CloudDownload, BookOpen, Plus, ScanSearch, Box, Layers, LayoutGrid, Command } from "lucide-react";
+import { CloudDownload, BookOpen, Plus, ScanSearch, Box, Layers, LayoutGrid } from "lucide-react";
 import { NewSkillDialog } from "@/components/NewSkillDialog";
 import { OnboardingDialog } from "@/components/OnboardingDialog";
 import { SkillConfigDialog } from "@/components/SkillConfigDialog";
@@ -10,7 +10,7 @@ import { useAppStore, type LocalSkill } from "@/hooks/useAppStore";
 import { SuitesPage } from "@/components/SuitesPage";
 import { HubPage } from "@/components/HubPage";
 import { MySkillsPage } from "@/components/MySkillsPage";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 
 type Page = "hub" | "my-skills" | "marketplace" | "projects" | "suites";
 
@@ -37,46 +37,44 @@ function App() {
       <motion.div 
         initial={{ x: -20, opacity: 0 }}
         animate={{ x: 0, opacity: 1 }}
-        transition={{ type: "spring" as const, stiffness: 100, damping: 20 }}
+        transition={{ type: "spring" as const, stiffness: 400, damping: 30, duration: 0.2 }}
         className="w-[280px] border-r border-border/40 bg-card/40 backdrop-blur-xl flex flex-col z-20 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]"
       >
         <div className="p-8 pb-6 flex items-center gap-3">
           <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-emerald-500 to-violet-500 flex items-center justify-center shadow-lg shadow-primary/20">
-            <Command className="h-5 w-5 text-white" />
+            <img src="/src/assets/app-icon.svg" className="h-full w-full object-cover rounded-lg" alt="logo" />
           </div>
           <h1 className="text-xl font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">XSkill</h1>
         </div>
         
         <div className="flex-1 px-4 space-y-1">
-          <p className="px-4 text-[11px] font-medium text-muted-foreground uppercase tracking-wider mb-4 mt-2">Menu</p>
-          <AnimatePresence>
-            {navItems.map((item) => (
-              <div key={item.id} className="relative">
-                {page === item.id && (
-                  <motion.div
-                    layoutId="active-nav"
-                    className="absolute inset-0 bg-primary/10 rounded-lg"
-                    initial={false}
-                    transition={{ type: "spring" as const, stiffness: 100, damping: 20 }}
-                  />
-                )}
-                <button
-                  className={`relative flex w-full items-center h-10 px-4 text-sm font-medium rounded-lg transition-colors ${
-                    page === item.id 
-                      ? "text-primary" 
-                      : "text-muted-foreground hover:text-foreground hover:bg-muted/30"
-                  }`}
-                  onClick={() => setPage(item.id)}
-                >
-                  {item.icon}
-                  {item.label}
-                </button>
-              </div>
-            ))}
-          </AnimatePresence>
+          <p className="px-4 text-[11px] font-medium text-muted-foreground/80 uppercase tracking-widest mb-4 mt-3">Menu</p>
+          {navItems.map((item) => (
+            <div key={item.id} className="relative">
+              {page === item.id && (
+                <motion.div
+                  layoutId="active-nav"
+                  className="absolute inset-0 bg-primary/10 rounded-lg"
+                  initial={false}
+                  transition={{ type: "spring", stiffness: 350, damping: 30 }}
+                />
+              )}
+              <button
+                className={`relative flex w-full items-center h-10 px-4 text-sm font-medium rounded-lg transition-colors cursor-pointer ${
+                  page === item.id 
+                    ? "text-primary" 
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted/30"
+                }`}
+                onClick={() => setPage(item.id)}
+              >
+                {item.icon}
+                {item.label}
+              </button>
+            </div>
+          ))}
         </div>
         
-        <div className="p-6 border-t border-border/30 text-[11px] font-medium text-muted-foreground flex justify-between items-center bg-muted/10">
+        <div className="p-6 border-t border-border/30 text-[11px] font-medium text-muted-foreground/80 flex justify-between items-center bg-muted/10">
           <span className="tracking-wide">v0.3.1</span>
           <div className="flex items-center gap-2">
             <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
@@ -112,7 +110,7 @@ function App() {
             key={page}
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ type: "spring" as const, stiffness: 100, damping: 20 }}
+            transition={{ type: "spring" as const, stiffness: 400, damping: 30, duration: 0.2 }}
             className="h-full max-w-[1400px] mx-auto"
           >
             {page === "hub" && (

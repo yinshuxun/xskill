@@ -54,7 +54,7 @@
   :root {
     /* Refined Light Mode: absolute neutral background (Zinc) */
     --background: 240 5% 98%; 
-    --foreground: 240 10% 10%;
+    --foreground: 240 10% 5%;
 
     --card: 0 0% 100%;
     --card-foreground: 240 10% 10%;
@@ -70,7 +70,7 @@
     --secondary-foreground: 240 6% 10%;
 
     --muted: 240 5% 96%;
-    --muted-foreground: 240 4% 46%;
+    --muted-foreground: 240 4% 38%;
 
     --accent: 240 5% 96%;
     --accent-foreground: 240 6% 10%;
@@ -103,7 +103,7 @@
     --secondary-foreground: 0 0% 98%;
 
     --muted: 240 5% 12%;
-    --muted-foreground: 240 5% 65%;
+    --muted-foreground: 240 5% 75%;
 
     --accent: 240 5% 12%;
     --accent-foreground: 0 0% 98%;
