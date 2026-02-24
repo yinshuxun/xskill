@@ -43,6 +43,7 @@ pub fn run() {
             suite_manager::load_suites,
             suite_manager::save_suites,
             suite_applier::apply_suite,
+            ide_sync::skill_collect_to_hub,
         ])
         .setup(|_app| {
             config::init_config();

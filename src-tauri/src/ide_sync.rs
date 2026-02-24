@@ -1,4 +1,5 @@
 use crate::config_manager::get_skill_config;
+use crate::skill_manager::CENTRAL_SKILLS_DIR;
 use serde_json::Value;
 use std::fs;
 use std::path::PathBuf;
@@ -54,6 +55,23 @@ fn copy_dir_all(src: &PathBuf, dst: &PathBuf) -> Result<(), String> {
     Ok(())
 }
 
+/// Create a symlink at `dst` pointing to `src`.
+/// On macOS/Linux uses `std::os::unix::fs::symlink`.
+#[cfg(unix)]
+fn symlink_dir(src: &PathBuf, dst: &PathBuf) -> Result<(), String> {
+    if dst.exists() || dst.is_symlink() {
+        fs::remove_file(dst)
+            .or_else(|_| fs::remove_dir_all(dst))
+            .map_err(|e| format!("Failed to remove existing target {}: {}", dst.display(), e))?;
+    }
+    if let Some(parent) = dst.parent() {
+        fs::create_dir_all(parent)
+            .map_err(|e| format!("Failed to create parent dir {}: {}", parent.display(), e))?;
+    }
+    std::os::unix::fs::symlink(src, dst)
+        .map_err(|e| format!("Failed to create symlink {} -> {}: {}", dst.display(), src.display(), e))
+}
+
 fn update_claude_desktop_config(skill_name: &str, _dest_path: &PathBuf) -> Result<(), String> {
     // Only works on macOS for now
     let home = dirs::home_dir().ok_or("Could not find home dir")?;
@@ -96,10 +114,16 @@ fn update_claude_desktop_config(skill_name: &str, _dest_path: &PathBuf) -> Resul
     Ok(())
 }
 
+/// Sync a skill directory to one or more target tool skill directories.
+///
+/// `mode` controls how the skill is delivered:
+/// - `"copy"` (default): copy the directory recursively
+/// - `"link"`: create a symlink pointing back to `skill_dir`
 #[tauri::command]
 pub fn sync_skill(
     skill_dir: String,
     target_tool_keys: Vec<String>,
+    mode: Option<String>,
 ) -> Result<Vec<String>, String> {
     let src = PathBuf::from(&skill_dir);
     if !src.exists() {
@@ -111,6 +135,8 @@ pub fn sync_skill(
         .ok_or_else(|| format!("Invalid skill directory path: {}", skill_dir))?
         .to_string();
 
+    let use_link = mode.as_deref() == Some("link");
+
     let mut written_paths: Vec<String> = Vec::new();
     let mut errors: Vec<String> = Vec::new();
 
@@ -119,7 +145,17 @@ pub fn sync_skill(
             None => errors.push(format!("Unknown tool key: {}", tool_key)),
             Some(skills_dir) => {
                 let dest = skills_dir.join(&skill_name);
-                match copy_dir_all(&src, &dest) {
+
+                let result = if use_link {
+                    #[cfg(unix)]
+                    { symlink_dir(&src, &dest) }
+                    #[cfg(not(unix))]
+                    { Err("Symlink mode is only supported on macOS/Linux".to_string()) }
+                } else {
+                    copy_dir_all(&src, &dest)
+                };
+
+                match result {
                     Ok(_) => {
                         written_paths.push(dest.to_string_lossy().to_string());
                         // Try to inject config for known tools
@@ -140,4 +176,28 @@ pub fn sync_skill(
     }
 
     Ok(written_paths)
+}
+
+/// Collect a skill from any Agent/Project-level directory into the Hub (`~/.xskill/skills/`).
+///
+/// The skill directory at `skill_dir` is copied into the Hub. If a skill with the
+/// same name already exists in the Hub, it is overwritten.
+#[tauri::command]
+pub fn skill_collect_to_hub(skill_dir: String) -> Result<String, String> {
+    let src = PathBuf::from(&skill_dir);
+    if !src.exists() || !src.is_dir() {
+        return Err(format!("Skill directory does not exist or is not a directory: {}", skill_dir));
+    }
+
+    let skill_name = src.file_name()
+        .and_then(|n| n.to_str())
+        .ok_or_else(|| format!("Invalid skill directory path: {}", skill_dir))?
+        .to_string();
+
+    let home = dirs::home_dir().ok_or("Could not find home directory")?;
+    let hub_dir = home.join(CENTRAL_SKILLS_DIR).join(&skill_name);
+
+    copy_dir_all(&src, &hub_dir).map_err(|e| e.to_string())?;
+
+    Ok(hub_dir.to_string_lossy().to_string())
 }
