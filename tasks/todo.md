@@ -46,17 +46,17 @@ This document tracks the development progress of XSkill.
 - [ ] **Visual Identity**:
     - [ ] **Icon**: Design new App Icon (Dark/Neon X style).
     - [ ] **Theme**: Switch to Dark Mode default with high-contrast accents.
-- [ ] **New Views**:
-    - [ ] **Projects View**: List scanned projects.
-    - [ ] **Suites/Kits View**: Manage groups of skills.
+- [x] **New Views**:
+    - [x] **Projects View**: List scanned projects.
+    - [x] **Suites/Kits View**: Manage groups of skills.
 
 ### 3.4 "Suites" (Workflow Enhancement)
 *Goal: Apply multiple skills and rules to a project in one click.*
-- [ ] **Data Model**: Define `Suite` (Name, Description, List of Skills, Rules/Context).
-- [ ] **Application Logic**:
-    - [ ] "Apply Suite to Project" action.
-    - [ ] Copies/Links skills to project's local config (e.g. `.cursor/mcp.json`).
-    - [ ] Writes `AGENTS.md` (Rules) to project root.
+- [x] **Data Model**: Define `Suite` (Name, Description, List of Skills, Rules/Context).
+- [x] **Application Logic**:
+    - [x] "Apply Suite to Project" action.
+    - [x] Copies/Links skills to project's local config (e.g. `.cursor/skills/`).
+    - [x] Writes `AGENTS.md` (Rules) to project root.
 
 ---
 

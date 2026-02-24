@@ -12,6 +12,8 @@ pub mod fingerprint;
 pub mod onboarding;
 pub mod scanner;
 pub mod github;
+pub mod suite_manager;
+pub mod suite_applier;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -38,6 +40,9 @@ pub fn run() {
             config_manager::save_skill_config,
             scanner::scan_workspace,
             github::fetch_github_file,
+            suite_manager::load_suites,
+            suite_manager::save_suites,
+            suite_applier::apply_suite,
         ])
         .setup(|_app| {
             config::init_config();

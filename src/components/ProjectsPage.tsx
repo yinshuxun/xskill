@@ -1,12 +1,14 @@
-import { useEffect } from "react";
-import { useAppStore } from "@/hooks/useAppStore";
+import { useState, useEffect } from "react";
+import { useAppStore, type Project } from "@/hooks/useAppStore";
+import { ApplySuiteDialog } from "@/components/ApplySuiteDialog";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { RefreshCw, FolderSearch, GitBranch, Box, FileText } from "lucide-react";
+import { RefreshCw, FolderSearch, GitBranch, Box, FileText, Layers } from "lucide-react";
 
 export function ProjectsPage() {
   const { projects, loadingProjects, scanProjects } = useAppStore();
+  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
 
   useEffect(() => {
     // Initial scan if empty
@@ -76,12 +78,22 @@ export function ProjectsPage() {
               </p>
             </div>
             <div className="flex gap-2">
-                {/* Actions placeholder */}
-                {/* <Button variant="ghost" size="sm">Details</Button> */}
+                <Button variant="outline" size="sm" onClick={() => setSelectedProject(project)}>
+                  <Layers className="mr-2 h-4 w-4" /> Apply Suite
+                </Button>
             </div>
           </Card>
         ))}
       </div>
+
+      <ApplySuiteDialog
+        isOpen={!!selectedProject}
+        onClose={() => {
+          setSelectedProject(null);
+          scanProjects(); // Refresh to show updated badges
+        }}
+        project={selectedProject}
+      />
     </div>
   );
 }

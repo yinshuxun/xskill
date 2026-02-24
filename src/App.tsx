@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Search, Settings, CloudDownload, BookOpen, Plus, RefreshCw, ScanSearch, Wrench, Box } from "lucide-react";
+import { Search, Settings, CloudDownload, BookOpen, Plus, RefreshCw, ScanSearch, Wrench, Box, Layers } from "lucide-react";
 import { NewSkillDialog } from "@/components/NewSkillDialog";
 import { OnboardingDialog } from "@/components/OnboardingDialog";
 import { SkillConfigDialog } from "@/components/SkillConfigDialog";
@@ -12,8 +12,9 @@ import { SettingsPage } from "@/components/SettingsPage";
 import { MarketplacePage } from "@/components/MarketplacePage";
 import { ProjectsPage } from "@/components/ProjectsPage";
 import { useAppStore, type LocalSkill, type Tool } from "@/hooks/useAppStore";
+import { SuitesPage } from "@/components/SuitesPage";
 
-type Page = "my-skills" | "marketplace" | "settings" | "projects";
+type Page = "my-skills" | "marketplace" | "settings" | "projects" | "suites";
 
 function SyncButton({ skill, tools }: { skill: LocalSkill; tools: Tool[] }) {
   const [open, setOpen] = useState(false);
@@ -77,6 +78,7 @@ function App() {
 
   const navItems: { id: Page; label: string; icon: React.ReactNode }[] = [
     { id: "my-skills", label: "My Skills", icon: <BookOpen className="mr-2 h-4 w-4" /> },
+    { id: "suites", label: "Suites", icon: <Layers className="mr-2 h-4 w-4" /> },
     { id: "projects", label: "Projects", icon: <Box className="mr-2 h-4 w-4" /> },
     { id: "marketplace", label: "Marketplace", icon: <CloudDownload className="mr-2 h-4 w-4" /> },
     { id: "settings", label: "Settings", icon: <Settings className="mr-2 h-4 w-4" /> },
@@ -174,6 +176,8 @@ function App() {
           )}
 
           {page === "projects" && <ProjectsPage />}
+          
+          {page === "suites" && <SuitesPage />}
 
           {page === "marketplace" && <MarketplacePage feeds={feeds} />}
 
