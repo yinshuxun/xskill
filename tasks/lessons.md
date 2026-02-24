@@ -34,3 +34,24 @@
 
 **教训**:
 AI Agent 环境中的工具链版本（如 Cargo 1.93）与用户实际宿主机的环境常常存在差异。千万不要自作聪明地用 "删除并重新生成 lockfile" 来试图解决——由于 AI 环境的 Cargo 版本太高，重新生成的仍然是 v4 格式，导致用户本地依然报错。**碰到这类问题，直接把 `Cargo.lock` 头部的 4 改成 3 是最稳妥也是最有效的向下兼容方法。**
+
+---
+
+## 3. Edition 2024 带来的底层依赖问题（以 getrandom v0.4 为例）
+
+**问题描述**:
+在启动或者更新依赖后，遇到报错：
+> `failed to download getrandom v0.4.1`
+> `failed to parse the edition key`
+> `this version of Cargo is older than the 2024 edition, and only supports 2015, 2018, and 2021 editions.`
+
+**解决方案**:
+近期许多库（如 `uuid`、`getrandom`）在升级时改为了只支持 Rust 2024 版本。当你的本地 Cargo 工具链被 `RUSTUP_TOOLCHAIN=stable` 限制或者较旧时，这些库会解析失败。
+解决办法是找出引入这些新版库的上游依赖，并强制将其降级到旧版。例如将 `uuid` 降级从而避免拉取 `getrandom v0.4.1`：
+```bash
+cargo update -p uuid --precise 1.11.0
+```
+完成降级后，记得还要检查 `Cargo.lock` 是否被高版本的 Cargo 写成了 `version = 4`，必要时手动改回 `version = 3`。
+
+**教训**:
+当底层基础库（如 `getrandom`, `time` 等）更新导致 `edition 2024` 解析错误时，**降级引起它的父依赖**是唯一解。你可以通过 `cargo tree -i <被报错的依赖包名>` （例如 `cargo tree -i getrandom@0.4.1`）来找出是哪个包引入了它。
