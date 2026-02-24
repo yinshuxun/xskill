@@ -1,14 +1,20 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useAppStore, type Project } from "@/hooks/useAppStore";
 import { ApplySuiteDialog } from "@/components/ApplySuiteDialog";
+import { ApplySkillsDialog } from "@/components/ApplySkillsDialog";
+import { ManageProjectSkillsDialog } from "@/components/ManageProjectSkillsDialog";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { RefreshCw, FolderSearch, GitBranch, Box, FileText, Layers } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { RefreshCw, FolderSearch, GitBranch, Box, FileText, Layers, Plus, Settings, Search } from "lucide-react";
 
 export function ProjectsPage() {
-  const { projects, loadingProjects, scanProjects } = useAppStore();
+  const { projects, loadingProjects, scanProjects, skills } = useAppStore();
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+  const [applyingSkillsProject, setApplyingSkillsProject] = useState<Project | null>(null);
+  const [managingProject, setManagingProject] = useState<Project | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     // Initial scan if empty
@@ -17,19 +23,41 @@ export function ProjectsPage() {
     }
   }, [scanProjects, projects.length]);
 
+  const filteredProjects = useMemo(() => {
+    return projects.filter(p => 
+      p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      p.path.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [projects, searchQuery]);
+
+  // Filter Hub skills for ApplySkillsDialog
+  const hubSkills = useMemo(() => {
+    return skills.filter(s => s.path.includes(".xskill/hub") || s.path.includes(".xskill/skills"));
+  }, [skills]);
+
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between">
+      <div className="flex items-start justify-between gap-4">
         <div>
           <h2 className="text-2xl font-semibold">Workspace Projects</h2>
           <p className="text-muted-foreground text-sm mt-1">
             Automatically scanned from your workspace directories.
           </p>
         </div>
-        <Button variant="outline" size="sm" onClick={() => scanProjects()} disabled={loadingProjects}>
-          <RefreshCw className={`mr-2 h-4 w-4 ${loadingProjects ? "animate-spin" : ""}`} />
-          Scan Workspace
-        </Button>
+        <div className="flex items-center gap-2 flex-1 justify-end max-w-md">
+            <div className="relative w-full">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input 
+                    placeholder="Search projects..." 
+                    className="pl-9 bg-background"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                />
+            </div>
+            <Button variant="outline" size="icon" onClick={() => scanProjects()} disabled={loadingProjects}>
+                <RefreshCw className={`h-4 w-4 ${loadingProjects ? "animate-spin" : ""}`} />
+            </Button>
+        </div>
       </div>
 
       {loadingProjects && projects.length === 0 && (
@@ -38,18 +66,20 @@ export function ProjectsPage() {
         </div>
       )}
 
-      {!loadingProjects && projects.length === 0 && (
+      {!loadingProjects && filteredProjects.length === 0 && (
         <div className="py-16 text-center text-muted-foreground text-sm border border-dashed rounded-lg">
           <FolderSearch className="mx-auto h-8 w-8 mb-3 opacity-40" />
-          <p>No projects found in standard directories.</p>
-          <p className="text-xs mt-1">(~/workspace, ~/projects, ~/codes, ~/dev)</p>
+          <p>No matching projects found.</p>
+          {projects.length === 0 && (
+            <p className="text-xs mt-1">(~/workspace, ~/projects, ~/codes, ~/dev)</p>
+          )}
         </div>
       )}
 
       <div className="grid grid-cols-1 gap-4">
-        {projects.map((project) => (
-          <Card key={project.path} className="flex flex-row items-center p-4 gap-4">
-            <div className="h-10 w-10 bg-secondary/50 rounded-md flex items-center justify-center shrink-0">
+        {filteredProjects.map((project) => (
+          <Card key={project.path} className="flex flex-row items-center p-4 gap-4 hover:border-primary/50 transition-colors group">
+            <div className="h-10 w-10 bg-secondary/50 rounded-md flex items-center justify-center shrink-0 group-hover:bg-primary/10 group-hover:text-primary transition-colors">
               <Box className="h-5 w-5 opacity-70" />
             </div>
             <div className="flex-1 min-w-0">
@@ -77,8 +107,14 @@ export function ProjectsPage() {
                 {project.path}
               </p>
             </div>
-            <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={() => setSelectedProject(project)}>
+            <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                <Button variant="ghost" size="sm" onClick={() => setManagingProject(project)}>
+                  <Settings className="mr-2 h-4 w-4" /> Manage
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => setApplyingSkillsProject(project)}>
+                  <Plus className="mr-2 h-4 w-4" /> Add Skills
+                </Button>
+                <Button variant="default" size="sm" onClick={() => setSelectedProject(project)}>
                   <Layers className="mr-2 h-4 w-4" /> Apply Suite
                 </Button>
             </div>
@@ -93,6 +129,26 @@ export function ProjectsPage() {
           scanProjects(); // Refresh to show updated badges
         }}
         project={selectedProject}
+      />
+
+      <ApplySkillsDialog
+        isOpen={!!applyingSkillsProject}
+        onClose={() => {
+          setApplyingSkillsProject(null);
+          scanProjects();
+        }}
+        project={applyingSkillsProject}
+        skills={hubSkills}
+      />
+
+      <ManageProjectSkillsDialog
+        isOpen={!!managingProject}
+        onClose={() => {
+          setManagingProject(null);
+          // Ideally refresh project skills if we had that state, but scanProjects only checks metadata
+          scanProjects();
+        }}
+        project={managingProject}
       />
     </div>
   );

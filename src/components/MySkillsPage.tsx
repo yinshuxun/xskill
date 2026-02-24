@@ -1,5 +1,7 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, BookOpen } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { RefreshCw, BookOpen, Search } from "lucide-react";
 import { SkillCard } from "@/components/SkillCard";
 import type { LocalSkill, Tool } from "@/hooks/useAppStore";
 
@@ -12,6 +14,8 @@ interface MySkillsPageProps {
 }
 
 export function MySkillsPage({ skills, loading, onRefresh, tools, onConfigure }: MySkillsPageProps) {
+  const [searchQuery, setSearchQuery] = useState("");
+
   // My Skills page shows ONLY skills that are actively installed/linked to Agents
   // We need to:
   // 1. Identify which skills are "Agent Skills" (not just raw Hub files)
@@ -34,6 +38,12 @@ export function MySkillsPage({ skills, loading, onRefresh, tools, onConfigure }:
     );
 
     if (agent) {
+      // Filter by search query
+      if (searchQuery && !skill.name.toLowerCase().includes(searchQuery.toLowerCase()) && 
+          !skill.description.toLowerCase().includes(searchQuery.toLowerCase())) {
+        return;
+      }
+
       const existing = skillGroups.get(skill.name);
       if (existing) {
         // Add this agent to the list if not already there
@@ -52,17 +62,27 @@ export function MySkillsPage({ skills, loading, onRefresh, tools, onConfigure }:
 
   return (
     <>
-      <div className="mb-6 flex items-start justify-between">
+      <div className="mb-6 flex items-start justify-between gap-4">
         <div>
           <h2 className="text-2xl font-semibold">My Skills</h2>
           <p className="text-muted-foreground text-sm mt-1">
             Skills actively installed in your Agents.
           </p>
         </div>
-        <Button variant="outline" size="sm" onClick={onRefresh} disabled={loading}>
-          <RefreshCw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-          Refresh
-        </Button>
+        <div className="flex items-center gap-2 flex-1 justify-end max-w-md">
+            <div className="relative w-full">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input 
+                    placeholder="Search installed skills..." 
+                    className="pl-9 bg-background"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                />
+            </div>
+            <Button variant="outline" size="icon" onClick={onRefresh} disabled={loading}>
+                <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+            </Button>
+        </div>
       </div>
 
       {loading && (

@@ -105,9 +105,8 @@ This document tracks the development progress of XSkill.
     - [x] Remove top-left icon.
     - [x] Version bump to 0.3.0.
 
-## Phase 5: Intelligence & Automation (Future)
+## Phase 5: v0.4.0 Intelligence & Automation (Future)
 - [ ] **AI Search**: "Find me a skill to handle PDF files" -> recommends from Marketplace.
-- [ ] **Auto-Update**: Git pull for installed skills.
 - [ ] **System Tray**: Quick access from menu bar.
 - [ ] **E2E Verification & Health**:
     - [ ] **Health Check View**: Dashboard for agent installation status and path validity.

@@ -1,13 +1,13 @@
 import { useState, useEffect, useMemo } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { listen } from "@tauri-apps/api/event";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardFooter, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CloudDownload, RefreshCw, AlertCircle, Star, GitFork, Search } from "lucide-react";
+import { CloudDownload, RefreshCw, AlertCircle, Star, GitFork, Search, CheckCircle2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { FixedSizeGrid as Grid } from "react-window";
 import AutoSizer from "react-virtualized-auto-sizer";
+import { useAppStore } from "@/hooks/useAppStore";
 
 interface MarketplaceSkill {
   id: string;
@@ -26,19 +26,21 @@ interface CellData {
   skills: MarketplaceSkill[];
   columnCount: number;
   installingId: string | null;
-  importProgress: string;
   onInstall: (skill: MarketplaceSkill) => void;
+  installedSkills: Set<string>;
 }
 
 const GUTTER_SIZE = 24;
 const ROW_HEIGHT = 280;
 
 const SkillCell = ({ columnIndex, rowIndex, style, data }: { columnIndex: number; rowIndex: number; style: React.CSSProperties; data: CellData }) => {
-  const { skills, columnCount, installingId, importProgress, onInstall } = data;
+  const { skills, columnCount, installingId, onInstall, installedSkills } = data;
   const index = rowIndex * columnCount + columnIndex;
   
   if (index >= skills.length) return null;
   const skill = skills[index];
+  const isInstalled = installedSkills.has(skill.name);
+  const isInstalling = installingId === skill.githubUrl;
 
   // Adjust style to create gaps
   const cellStyle = {
@@ -51,8 +53,8 @@ const SkillCell = ({ columnIndex, rowIndex, style, data }: { columnIndex: number
 
   return (
     <div style={cellStyle}>
-      <Card className="flex flex-col h-full hover:border-primary/50 transition-colors">
-        <CardHeader className="pb-3">
+      <Card className="flex flex-col h-full hover:border-primary/50 transition-colors overflow-hidden">
+        <CardHeader className="pb-3 shrink-0">
           <div className="flex justify-between items-start gap-2">
             <div className="flex items-center gap-2 overflow-hidden">
               <img src={skill.authorAvatar} alt={skill.author} className="h-6 w-6 rounded-full shrink-0" />
@@ -66,7 +68,7 @@ const SkillCell = ({ columnIndex, rowIndex, style, data }: { columnIndex: number
               by <span className="font-medium text-foreground">{skill.author}</span>
           </div>
         </CardHeader>
-        <CardContent className="flex-1 pb-3">
+        <CardContent className="flex-1 pb-3 min-h-0 overflow-hidden">
             <p className="text-sm text-muted-foreground line-clamp-3 mb-3" title={skill.description}>
               {skill.description}
             </p>
@@ -81,17 +83,22 @@ const SkillCell = ({ columnIndex, rowIndex, style, data }: { columnIndex: number
                 </div>
             </div>
         </CardContent>
-        <CardFooter className="pt-3 border-t border-border/50">
+        <CardFooter className="pt-3 border-t border-border/50 shrink-0 bg-card">
           <div className="w-full flex flex-col gap-2">
               <Button
               className="w-full"
               size="sm"
-              disabled={!!installingId}
+              disabled={!!installingId || isInstalled}
               onClick={() => onInstall(skill)}
+              variant={isInstalled ? "secondary" : "default"}
               >
-              {installingId === skill.githubUrl ? (
+              {isInstalling ? (
                   <>
                   <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> Installing…
+                  </>
+              ) : isInstalled ? (
+                  <>
+                  <CheckCircle2 className="mr-2 h-4 w-4 text-green-500" /> Installed
                   </>
               ) : (
                   <>
@@ -99,11 +106,6 @@ const SkillCell = ({ columnIndex, rowIndex, style, data }: { columnIndex: number
                   </>
               )}
               </Button>
-              {installingId === skill.githubUrl && importProgress && (
-                  <div className="text-xs text-center text-muted-foreground truncate px-1 animate-pulse">
-                     {importProgress}
-                  </div>
-              )}
           </div>
         </CardFooter>
       </Card>
@@ -112,13 +114,25 @@ const SkillCell = ({ columnIndex, rowIndex, style, data }: { columnIndex: number
 };
 
 export function MarketplacePage() {
+  const { skills: localSkills, refreshSkills } = useAppStore();
   const [skills, setSkills] = useState<MarketplaceSkill[]>([]);
   const [filteredSkills, setFilteredSkills] = useState<MarketplaceSkill[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [installingId, setInstallingId] = useState<string | null>(null);
-  const [importProgress, setImportProgress] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState("");
+
+  // Create a set of installed skill names for fast lookup
+  const installedSkillNames = useMemo(() => {
+    const names = new Set<string>();
+    localSkills.forEach(s => {
+        // Only count Hub skills as "Installed" in the marketplace context
+        if (s.path.includes(".xskill/hub") || s.path.includes(".xskill/skills")) {
+            names.add(s.name);
+        }
+    });
+    return names;
+  }, [localSkills]);
 
   const fetchMarketplace = async () => {
     setLoading(true);
@@ -164,23 +178,17 @@ export function MarketplacePage() {
 
   const handleInstall = async (skill: MarketplaceSkill) => {
     setInstallingId(skill.githubUrl);
-    setImportProgress("Starting...");
     
-    const unlisten = await listen<string>("import-progress", (event) => {
-      setImportProgress(event.payload);
-    });
-
     try {
       await invoke("install_skill_from_url", {
         repoUrl: skill.githubUrl,
       });
-      alert(`✅ "${skill.name}" installed successfully to XSkill Hub!`);
+      refreshSkills(); // Refresh local skills to update "Installed" status
+      alert(`✅ "${skill.name}" installed successfully! Go to Hub to view.`);
     } catch (err) {
       alert(`❌ Install failed: ${err}`);
     } finally {
-      unlisten();
       setInstallingId(null);
-      setImportProgress("");
     }
   };
 
@@ -188,9 +196,9 @@ export function MarketplacePage() {
     skills: filteredSkills,
     columnCount: 1, // Will be overridden by grid render
     installingId,
-    importProgress,
-    onInstall: handleInstall
-  }), [filteredSkills, installingId, importProgress]);
+    onInstall: handleInstall,
+    installedSkills: installedSkillNames
+  }), [filteredSkills, installingId, installedSkillNames]);
 
   return (
     <div className="flex flex-col h-full">
