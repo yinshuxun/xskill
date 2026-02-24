@@ -1,85 +1,91 @@
-use serde::{Deserialize, Serialize};
-use serde_json::{Map, Value};
 use std::fs;
 use std::path::PathBuf;
+use walkdir::WalkDir;
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct McpConfig {
-    #[serde(rename = "mcpServers", default)]
-    pub mcp_servers: Map<String, Value>,
-    #[serde(flatten)]
-    pub other: Map<String, Value>,
+fn tool_skills_dir(tool_key: &str) -> Option<PathBuf> {
+    let home = dirs::home_dir()?;
+    let subdir = match tool_key {
+        "cursor"         => ".cursor/skills",
+        "claude_code"    => ".claude/skills",
+        "opencode"       => ".config/opencode/skills",
+        "windsurf"       => ".codeium/windsurf/skills",
+        "gemini_cli"     => ".gemini/skills",
+        "github_copilot" => ".copilot/skills",
+        "amp"            => ".config/agents/skills",
+        "goose"          => ".config/goose/skills",
+        "antigravity"    => ".gemini/antigravity/global_skills",
+        "augment"        => ".augment/rules",
+        "codex"          => ".codex/skills",
+        "kimi_cli"       => ".kimi/skills",
+        "openclaw"       => ".openclaw/skills",
+        "cline"          => ".cline/skills",
+        "codebuddy"      => ".codebuddy/skills",
+        "continue_dev"   => ".continue/skills",
+        "crush"          => ".crush/skills",
+        "junie"          => ".junie/skills",
+        "kode"           => ".kode/skills",
+        "roo_code"       => ".roo-code/skills",
+        "kilo_code"      => ".kilocode/skills",
+        _ => return None,
+    };
+    Some(home.join(subdir))
+}
+
+fn copy_dir_all(src: &PathBuf, dst: &PathBuf) -> Result<(), String> {
+    fs::create_dir_all(dst)
+        .map_err(|e| format!("Failed to create dir {}: {}", dst.display(), e))?;
+
+    for entry in WalkDir::new(src).min_depth(1) {
+        let entry = entry.map_err(|e| format!("Walk error: {}", e))?;
+        let relative = entry.path().strip_prefix(src)
+            .map_err(|e| format!("Strip prefix error: {}", e))?;
+        let dest_path = dst.join(relative);
+
+        if entry.path().is_dir() {
+            fs::create_dir_all(&dest_path)
+                .map_err(|e| format!("Failed to create dir {}: {}", dest_path.display(), e))?;
+        } else {
+            fs::copy(entry.path(), &dest_path)
+                .map_err(|e| format!("Failed to copy {}: {}", entry.path().display(), e))?;
+        }
+    }
+    Ok(())
 }
 
 #[tauri::command]
-pub fn sync_to_ide(ide_name: &str, mcp_config: Value) -> Result<(), String> {
-    let config_path = match ide_name {
-        "cursor" => get_cursor_config_path(),
-        "opencode" => get_opencode_config_path(),
-        _ => return Err(format!("Unsupported IDE: {}", ide_name)),
-    }?;
-
-    if let Some(parent) = config_path.parent() {
-        if !parent.exists() {
-            fs::create_dir_all(parent).map_err(|e| format!("Failed to create directory: {}", e))?;
-        }
+pub fn sync_skill(
+    skill_dir: String,
+    target_tool_keys: Vec<String>,
+) -> Result<Vec<String>, String> {
+    let src = PathBuf::from(&skill_dir);
+    if !src.exists() {
+        return Err(format!("Skill directory does not exist: {}", skill_dir));
     }
 
-    let mut existing_config: McpConfig = if config_path.exists() {
-        let content = fs::read_to_string(&config_path)
-            .map_err(|e| format!("Failed to read config file: {}", e))?;
-        serde_json::from_str(&content).unwrap_or_else(|_| McpConfig {
-            mcp_servers: Map::new(),
-            other: Map::new(),
-        })
-    } else {
-        McpConfig {
-            mcp_servers: Map::new(),
-            other: Map::new(),
-        }
-    };
+    let skill_name = src.file_name()
+        .and_then(|n| n.to_str())
+        .ok_or_else(|| format!("Invalid skill directory path: {}", skill_dir))?
+        .to_string();
 
-    if let Some(new_obj) = mcp_config.as_object() {
-        for (k, v) in new_obj {
-            if k == "mcpServers" {
-                if let Some(new_servers) = v.as_object() {
-                    for (server_name, server_config) in new_servers {
-                        existing_config
-                            .mcp_servers
-                            .insert(server_name.clone(), server_config.clone());
-                    }
+    let mut written_paths: Vec<String> = Vec::new();
+    let mut errors: Vec<String> = Vec::new();
+
+    for tool_key in &target_tool_keys {
+        match tool_skills_dir(tool_key) {
+            None => errors.push(format!("Unknown tool key: {}", tool_key)),
+            Some(skills_dir) => {
+                let dest = skills_dir.join(&skill_name);
+                match copy_dir_all(&src, &dest) {
+                    Ok(_) => written_paths.push(dest.to_string_lossy().to_string()),
+                    Err(e) => errors.push(format!("{}: {}", tool_key, e)),
                 }
-            } else {
-                existing_config.other.insert(k.clone(), v.clone());
             }
         }
     }
 
-    let json_str = serde_json::to_string_pretty(&existing_config)
-        .map_err(|e| format!("Failed to serialize config: {}", e))?;
+    if !errors.is_empty() && written_paths.is_empty() {
+        return Err(errors.join("; "));
+    }
 
-    fs::write(&config_path, json_str).map_err(|e| format!("Failed to write config file: {}", e))?;
-
-    Ok(())
-}
-
-fn get_cursor_config_path() -> Result<PathBuf, String> {
-    let mut path = dirs::home_dir().ok_or("Could not find home directory")?;
-    path.push("Library");
-    path.push("Application Support");
-    path.push("Cursor");
-    path.push("User");
-    path.push("globalStorage");
-    path.push("saoudrizwan.claude-dev");
-    path.push("settings");
-    path.push("cline_mcp_settings.json");
-    Ok(path)
-}
-
-fn get_opencode_config_path() -> Result<PathBuf, String> {
-    let mut path = dirs::home_dir().ok_or("Could not find home directory")?;
-    path.push(".config");
-    path.push("opencode");
-    path.push("mcp.json");
-    Ok(path)
+    Ok(written_paths)
 }

@@ -24,6 +24,8 @@ skill-hub-mac/
 │   │   ├── crawler.rs       # 市场爬虫逻辑
 │   │   ├── feed_parser.rs   # 内部订阅源解析逻辑
 │   │   ├── git_manager.rs   # Git 仓库克隆与更新逻辑
+│   │   ├── onboarding.rs    # 技能扫描与导入逻辑 (New)
+│   │   ├── fingerprint.rs   # 技能目录指纹识别逻辑 (New)
 │   │   └── config.rs        # 本地配置管理
 │   ├── tauri.conf.json      # Tauri 配置文件
 │   └── Cargo.toml           # Rust 依赖管理
@@ -43,18 +45,28 @@ skill-hub-mac/
 
 ## 3. 核心模块技术方案
 
-### 3.1 IDE 配置文件同步
+### 3.1 IDE 配置文件同步与中心化管理
+- **中心化存储**：Skill Hub 使用 `~/.xskill/skills` 作为 Skills 的权威存储中心。
 - **原理**：Cursor、Claude Desktop 等工具的 MCP 配置通常存储在特定的本地路径（如 `~/Library/Application Support/Cursor/User/globalStorage/.../mcp.json`）。
-- **实现**：Rust 后端提供 `sync_to_ide` 命令，读取目标 JSON 文件，将 Skill Hub 中启用的技能合并进去，并写回文件。
+- **实现**：Rust 后端提供 `sync_to_ide` 命令，读取目标 JSON 文件，将 Skill Hub 中心仓库中启用的技能路径（Absolute Path）注入到对应 IDE 的配置中。
 
-### 3.2 市场爬虫
+### 3.2 智能接管 (Onboarding)
+- **原理**：扫描常见工具目录，通过计算目录哈希 (Fingerprint) 识别已存在的 Skills，去重并提供导入向导。
+- **实现**：
+  - `onboarding.rs`: 遍历 `~/.cursor`, `~/.claude` 等目录，提取可能的 Skill 路径。
+  - `fingerprint.rs`: 使用 SHA256 对 Skill 目录内容（忽略 .git, node_modules）计算哈希值，与中心仓库比对。
+
+### 3.3 市场爬虫
 - **原理**：定期请求目标网站（如 skillsmp.com 的 API 或 HTML），解析出 Skill 的 GitHub 仓库地址、描述和安装命令。
 - **实现**：使用 Rust 的 `reqwest` 库发起请求，数据缓存在本地 SQLite 中，前端通过分页读取。
 
-### 3.3 快捷创建脚手架
-- **实现**：在 `src-tauri` 中内置基础的 MCP 模板压缩包。用户点击创建时，Rust 后端将模板解压到用户指定目录，并调用系统命令执行 `npm install`。
-
-### 3.4 内部技能分发与订阅 (Internal Skill Feeds)
+### 3.4 技能配置与安全存储 (Skill Configuration)
+- **原理**：MCP Server 的配置是一个复杂的 JSON 对象，包含 `command`, `args`, `env` 等字段。
+- **实现**：
+  - `config_manager.rs`: 负责加载和保存每个 Skill 的用户自定义配置。
+  - **动态表单**：前端根据 Skill 元数据生成配置表单（例如 `args` 需要文件路径选择器，`env` 需要密码框）。
+  - **安全存储**：对于 API Keys 等敏感数据，使用 `tauri-plugin-store` 的加密存储或 Mac Keychain，绝不以明文形式保存到 Git 或普通文本文件中。
+  - **配置注入**：在 `sync_to_ide` 阶段，将解密后的完整配置对象（包含 Args 和 Env）注入到 IDE 的 JSON 配置文件中。
 - **原理**：通过读取公司内部 Git 仓库托管的 `registry.json` 文件，实现去中心化的内部技能分发。
 - **实现**：
   - `feed_parser.rs`：负责定时拉取和解析用户配置的多个订阅源 URL，将数据合并后提供给前端展示。

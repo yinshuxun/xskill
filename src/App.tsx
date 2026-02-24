@@ -4,58 +4,84 @@ import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Search, Settings, CloudDownload, Server, Plus } from "lucide-react";
+import { Search, Settings, CloudDownload, BookOpen, Plus, RefreshCw, ScanSearch } from "lucide-react";
 import { NewSkillDialog } from "@/components/NewSkillDialog";
+import { OnboardingDialog } from "@/components/OnboardingDialog";
 import { SettingsPage } from "@/components/SettingsPage";
 import { MarketplacePage } from "@/components/MarketplacePage";
-import { useAppStore, type Skill } from "@/hooks/useAppStore";
+import { useAppStore, type LocalSkill, type Tool } from "@/hooks/useAppStore";
 
 type Page = "my-skills" | "marketplace" | "settings";
 
+function SyncButton({ skill, tools }: { skill: LocalSkill; tools: Tool[] }) {
+  const [open, setOpen] = useState(false);
+  const [syncing, setSyncing] = useState<string | null>(null);
 
+  const installedTools = tools.filter((t) => t.installed && t.key !== skill.tool_key);
+
+  const handleSync = async (targetKey: string) => {
+    setSyncing(targetKey);
+    try {
+      await invoke("sync_skill", {
+        skillDir: skill.path,
+        targetToolKeys: [targetKey],
+      });
+      setOpen(false);
+    } catch (err) {
+      alert(`Sync failed: ${err}`);
+    } finally {
+      setSyncing(null);
+    }
+  };
+
+  if (installedTools.length === 0) return null;
+
+  return (
+    <div className="relative">
+      <Button variant="outline" size="sm" onClick={() => setOpen((v) => !v)}>
+        Sync to…
+      </Button>
+      {open && (
+        <div className="absolute right-0 bottom-full mb-1 z-50 bg-popover border border-border rounded-md shadow-lg min-w-[160px] py-1">
+          {installedTools.map((t) => (
+            <button
+              key={t.key}
+              className="w-full text-left px-3 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground disabled:opacity-50"
+              disabled={syncing === t.key}
+              onClick={() => handleSync(t.key)}
+            >
+              {syncing === t.key ? "Syncing…" : t.display_name}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 function App() {
-  const { skills, feeds, persistSkills, persistFeeds } = useAppStore();
+  const { skills, tools, feeds, loadingSkills, persistFeeds, refreshSkills } = useAppStore();
   const [page, setPage] = useState<Page>("my-skills");
   const [searchQuery, setSearchQuery] = useState("");
   const [isNewSkillModalOpen, setIsNewSkillModalOpen] = useState(false);
-
-  const handleSkillCreated = (skill: Skill) => {
-    persistSkills([...skills, skill]);
-  };
+  const [isOnboardingModalOpen, setIsOnboardingModalOpen] = useState(false);
 
   const filteredSkills = skills.filter(
     (s) =>
       s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      s.desc.toLowerCase().includes(searchQuery.toLowerCase())
+      s.description.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const handleSync = async (ideName: string, skill: Skill) => {
-    try {
-      const mcpConfig = {
-        mcpServers: {
-          [skill.name.replace(/\s+/g, "_").toLowerCase()]: {
-            command: "node",
-            args: [skill.path ? `${skill.path}/dist/index.js` : "/path/to/script.js"],
-          },
-        },
-      };
-      await invoke("sync_to_ide", { ideName, mcpConfig });
-      alert(`Successfully synced ${skill.name} to ${ideName === "cursor" ? "Cursor" : "OpenCode"}!`);
-    } catch (error) {
-      alert(`Failed to sync ${skill.name} to ${ideName}: ${error}`);
-    }
-  };
-
   const navItems: { id: Page; label: string; icon: React.ReactNode }[] = [
-    { id: "my-skills", label: "My Skills", icon: <Server className="mr-2 h-4 w-4" /> },
+    { id: "my-skills", label: "My Skills", icon: <BookOpen className="mr-2 h-4 w-4" /> },
     { id: "marketplace", label: "Marketplace", icon: <CloudDownload className="mr-2 h-4 w-4" /> },
     { id: "settings", label: "Settings", icon: <Settings className="mr-2 h-4 w-4" /> },
   ];
 
+  const installedTools = tools.filter((t) => t.installed);
+
   return (
     <div className="flex h-screen bg-background text-foreground font-sans">
-      {/* Sidebar */}
       <div className="w-64 border-r border-border bg-card/50 flex flex-col">
         <div className="p-4 border-b border-border">
           <h1 className="text-xl font-bold tracking-tight">XSkill</h1>
@@ -75,9 +101,7 @@ function App() {
         </div>
       </div>
 
-      {/* Main Content */}
       <div className="flex-1 flex flex-col">
-        {/* Header */}
         <header className="h-16 border-b border-border flex items-center justify-between px-6 bg-background">
           <div className="flex items-center w-full max-w-md relative">
             <Search className="absolute left-3 h-4 w-4 text-muted-foreground" />
@@ -89,59 +113,54 @@ function App() {
             />
           </div>
           <div className="flex items-center space-x-2">
+            <Button variant="outline" onClick={() => setIsOnboardingModalOpen(true)}>
+              <ScanSearch className="mr-2 h-4 w-4" /> Import Skills
+            </Button>
             <Button onClick={() => setIsNewSkillModalOpen(true)}>
               <Plus className="mr-2 h-4 w-4" /> New Skill
             </Button>
           </div>
         </header>
 
-        {/* Content Area */}
         <main className="flex-1 p-6 overflow-y-auto">
           {page === "my-skills" && (
             <>
-              <div className="mb-6">
-                <h2 className="text-2xl font-semibold">Installed Skills</h2>
-                <p className="text-muted-foreground text-sm">Manage and sync your AI skills to local IDEs.</p>
+              <div className="mb-6 flex items-start justify-between">
+                <div>
+                  <h2 className="text-2xl font-semibold">My Skills</h2>
+                  <p className="text-muted-foreground text-sm mt-1">
+                    Skills read from your local AI tool directories.
+                  </p>
+                </div>
+                <Button variant="outline" size="sm" onClick={refreshSkills} disabled={loadingSkills}>
+                  <RefreshCw className={`mr-2 h-4 w-4 ${loadingSkills ? "animate-spin" : ""}`} />
+                  Refresh
+                </Button>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredSkills.map((skill) => (
-                  <Card key={skill.id} className="flex flex-col">
-                    <CardHeader>
-                      <div className="flex justify-between items-start">
-                        <CardTitle className="text-lg">{skill.name}</CardTitle>
-                        <Badge variant={skill.skill_type === "Internal" ? "default" : "secondary"}>
-                          {skill.skill_type}
-                        </Badge>
-                      </div>
-                      <CardDescription>{skill.desc}</CardDescription>
-                    </CardHeader>
-                    <CardFooter className="mt-auto flex justify-between pt-4 border-t border-border/50">
-                      <span className="text-xs text-muted-foreground flex items-center">
-                        <span
-                          className={`w-2 h-2 rounded-full mr-2 ${
-                            skill.status === "Active" ? "bg-green-500" : "bg-gray-400"
-                          }`}
-                        />
-                        {skill.status}
-                      </span>
-                      <div className="flex space-x-2">
-                        <Button variant="outline" size="sm" onClick={() => handleSync("cursor", skill)}>
-                          Sync Cursor
-                        </Button>
-                        <Button variant="outline" size="sm" onClick={() => handleSync("opencode", skill)}>
-                          Sync OpenCode
-                        </Button>
-                      </div>
-                    </CardFooter>
-                  </Card>
-                ))}
-                {filteredSkills.length === 0 && (
-                  <p className="text-sm text-muted-foreground col-span-3 py-10 text-center">
-                    No skills match your search.
-                  </p>
-                )}
-              </div>
+              {loadingSkills && (
+                <div className="flex items-center justify-center py-20 text-muted-foreground text-sm">
+                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> Loading skills…
+                </div>
+              )}
+
+              {!loadingSkills && filteredSkills.length === 0 && (
+                <div className="py-16 text-center text-muted-foreground text-sm">
+                  <BookOpen className="mx-auto h-8 w-8 mb-3 opacity-40" />
+                  <p>No skills found. Skills are read from your local tool directories.</p>
+                  <Button variant="outline" size="sm" className="mt-4" onClick={refreshSkills}>
+                    Refresh
+                  </Button>
+                </div>
+              )}
+
+              {!loadingSkills && filteredSkills.length > 0 && (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {filteredSkills.map((skill) => (
+                    <SkillCard key={`${skill.tool_key}-${skill.name}`} skill={skill} tools={tools} />
+                  ))}
+                </div>
+              )}
             </>
           )}
 
@@ -154,9 +173,42 @@ function App() {
       <NewSkillDialog
         isOpen={isNewSkillModalOpen}
         onClose={() => setIsNewSkillModalOpen(false)}
-        onCreated={handleSkillCreated}
+        tools={installedTools}
+        onCreated={() => {
+          setIsNewSkillModalOpen(false);
+          refreshSkills();
+        }}
+      />
+      
+      <OnboardingDialog
+        isOpen={isOnboardingModalOpen}
+        onClose={() => setIsOnboardingModalOpen(false)}
+        onImportComplete={() => {
+          refreshSkills();
+        }}
       />
     </div>
+  );
+}
+
+function SkillCard({ skill, tools }: { skill: LocalSkill; tools: Tool[] }) {
+  const toolLabel = tools.find((t) => t.key === skill.tool_key)?.display_name ?? skill.tool_key;
+
+  return (
+    <Card className="flex flex-col">
+      <CardHeader>
+        <div className="flex justify-between items-start gap-2">
+          <CardTitle className="text-lg leading-tight">{skill.name}</CardTitle>
+          <Badge variant="secondary" className="shrink-0 text-xs">
+            {toolLabel}
+          </Badge>
+        </div>
+        <CardDescription>{skill.description || "No description"}</CardDescription>
+      </CardHeader>
+      <CardFooter className="mt-auto pt-4 border-t border-border/50 justify-end">
+        <SyncButton skill={skill} tools={tools} />
+      </CardFooter>
+    </Card>
   );
 }
 

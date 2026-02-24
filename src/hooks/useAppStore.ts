@@ -1,14 +1,22 @@
 import { useState, useEffect, useCallback } from "react";
+import { invoke } from "@tauri-apps/api/core";
 import { load } from "@tauri-apps/plugin-store";
 
-export interface Skill {
-  id: string;
+export interface LocalSkill {
   name: string;
-  desc: string;
-  skill_type: string;
-  status: string;
-  path?: string;
-  repo_url?: string;
+  description: string;
+  path: string;
+  tool_key: string;
+  disable_model_invocation: boolean;
+  allowed_tools: string[];
+  content: string;
+}
+
+export interface Tool {
+  key: string;
+  display_name: string;
+  skills_dir: string;
+  installed: boolean;
 }
 
 export interface FeedEntry {
@@ -18,14 +26,7 @@ export interface FeedEntry {
 }
 
 const STORE_FILE = "xskill.json";
-const KEY_SKILLS = "skills";
 const KEY_FEEDS = "feeds";
-
-const DEFAULT_SKILLS: Skill[] = [
-  { id: "1", name: "Jira Helper", desc: "Manage your Jira tickets via Vibe Coding.", skill_type: "Internal", status: "Active" },
-  { id: "2", name: "Figma MCP", desc: "Read and generate Figma components.", skill_type: "Public", status: "Inactive" },
-  { id: "3", name: "Local RAG", desc: "Query company docs securely.", skill_type: "Internal", status: "Active" },
-];
 
 const DEFAULT_FEEDS: FeedEntry[] = [
   {
@@ -36,37 +37,58 @@ const DEFAULT_FEEDS: FeedEntry[] = [
 ];
 
 export function useAppStore() {
-  const [skills, setSkillsState] = useState<Skill[]>(DEFAULT_SKILLS);
+  const [skills, setSkills] = useState<LocalSkill[]>([]);
+  const [tools, setTools] = useState<Tool[]>([]);
   const [feeds, setFeedsState] = useState<FeedEntry[]>(DEFAULT_FEEDS);
-  const [ready, setReady] = useState(false);
+  const [loadingSkills, setLoadingSkills] = useState(true);
+
+  const loadSkills = useCallback(async () => {
+    setLoadingSkills(true);
+    try {
+      const result = await invoke<LocalSkill[]>("get_all_local_skills");
+      setSkills(result);
+    } catch {
+      setSkills([]);
+    } finally {
+      setLoadingSkills(false);
+    }
+  }, []);
+
+  const loadTools = useCallback(async () => {
+    try {
+      const result = await invoke<Tool[]>("get_installed_tools");
+      setTools(result);
+    } catch {
+      setTools([]);
+    }
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
+
     (async () => {
       try {
         const store = await load(STORE_FILE, { defaults: {} });
-        const savedSkills = await store.get<Skill[]>(KEY_SKILLS);
         const savedFeeds = await store.get<FeedEntry[]>(KEY_FEEDS);
-        if (!cancelled) {
-          if (savedSkills && savedSkills.length > 0) setSkillsState(savedSkills);
-          if (savedFeeds && savedFeeds.length > 0) setFeedsState(savedFeeds);
-          setReady(true);
+        if (!cancelled && savedFeeds && savedFeeds.length > 0) {
+          setFeedsState(savedFeeds);
         }
       } catch {
-        if (!cancelled) setReady(true);
+
       }
     })();
-    return () => { cancelled = true; };
-  }, []);
 
-  const persistSkills = useCallback(async (updated: Skill[]) => {
-    setSkillsState(updated);
-    try {
-      const store = await load(STORE_FILE, { defaults: {} });
-      await store.set(KEY_SKILLS, updated);
-      await store.save();
-    } catch {}
-  }, []);
+    loadSkills();
+    loadTools();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [loadSkills, loadTools]);
+
+  const refreshSkills = useCallback(() => {
+    loadSkills();
+  }, [loadSkills]);
 
   const persistFeeds = useCallback(async (updated: FeedEntry[]) => {
     setFeedsState(updated);
@@ -74,8 +96,10 @@ export function useAppStore() {
       const store = await load(STORE_FILE, { defaults: {} });
       await store.set(KEY_FEEDS, updated);
       await store.save();
-    } catch {}
+    } catch {
+
+    }
   }, []);
 
-  return { skills, feeds, ready, persistSkills, persistFeeds };
+  return { skills, tools, feeds, loadingSkills, persistFeeds, refreshSkills };
 }

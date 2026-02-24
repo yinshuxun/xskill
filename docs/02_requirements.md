@@ -13,19 +13,36 @@
 ## 3. 需求清单 (Feature List)
 
 ### 3.1 本地技能管理 (Local Skill Management)
-- **技能列表视图**：展示本地已安装的所有 Skills，包含名称、描述、图标、来源（本地创建/市场下载）、状态（启用/禁用）。
+- **中心化仓库 (Central Repository)**：
+  - 采用 "Install once, use everywhere" 理念。
+  - 所有托管的 Skills 统一存储在 `~/.xskill/skills` (可配置) 目录下。
+  - 支持从 Git 仓库、本地文件夹、压缩包导入 Skill 到中心仓库。
+- **技能列表视图**：展示本地已安装的所有 Skills，包含名称、描述、图标、来源（本地创建/市场下载/导入）、状态（启用/禁用）。
 - **技能详情页**：查看 Skill 的具体配置（环境变量、执行命令、参数说明）。
 - **快捷创建 (Scaffolding)**：
   - 提供官方标准模板（TypeScript / Python）。
   - 一键生成项目结构，自动执行 `npm install` 或 `pip install`。
+- **智能导入与接管 (Onboarding & Migration)**：
+  - **自动扫描**：启动时扫描常见的 IDE 配置文件 (Cursor, Claude, OpenCode) 和目录。
+  - **指纹识别 (Fingerprinting)**：通过计算目录内容哈希，识别不同位置的重复 Skill。
+  - **一键接管**：提供向导将散落在各处的 Skills 移动或复制到中心仓库统一管理。
 - **本地化存储**：所有配置和元数据存储在本地 SQLite 或 JSON 文件中，确保企业数据绝对安全。
 
 ### 3.2 多 IDE 快捷同步 (IDE Integration)
 - **环境检测**：自动扫描 Mac 本地安装的 Vibe Coding 工具（支持 Cursor, OpenCode, Windsurf, Claude Desktop 等）。
-- **一键同步**：将选中的 Skills 配置（如 `mcp.json` 或 `claude_desktop_config.json`）自动注入到对应 IDE 的配置文件中。
-- **环境变量管理**：统一管理所有 Skills 需要的 API Keys 和敏感信息，同步时自动注入。
+- **配置生成与注入 (Config Generation)**：
+  - 基于 Skill 的定义（Command, Args, Env）生成标准的 MCP JSON 配置。
+  - 自动将配置注入到对应 IDE 的配置文件中（如 `claude_desktop_config.json` 或 `mcp.json`）。
+- **多 Profile 支持**：允许为不同项目或 IDE 创建不同的配置组合（例如：Project A 使用 Skill X+Y，Project B 使用 Skill Z）。
 
-### 3.3 市场聚合与爬虫 (Marketplace & Crawler)
+### 3.3 技能配置管理 (Skill Configuration)
+- **参数化配置 (Parameterized Config)**：
+  - 不仅仅是环境变量，支持对 MCP Server 的 `command` (执行命令) 和 `args` (启动参数) 进行完整配置。
+  - 例如：为 `filesystem` Server 配置允许访问的目录路径 (Args)，为 `weather` Server 配置 API Key (Env)。
+- **动态表单 (Dynamic Form)**：
+  - 解析 Skill 的元数据（如果存在），生成友好的配置表单。
+  - 对于通用 Skill，提供 JSON 编辑器或 Key-Value 编辑器。
+- **敏感数据安全**：API Keys 等敏感信息使用系统 Keychain 或加密存储，绝不明文保存于 Git 仓库中。
 - **公共市场聚合**：内置爬虫模块，定期从主流供应商（如 skillsmp.com, smithery.ai, GitHub MCP 官方仓库）抓取热门 Skills。
 - **统一搜索**：在本地客户端内直接搜索全网 Skills。
 - **一键安装**：解析远程仓库，自动克隆代码、安装依赖并注册到本地库。

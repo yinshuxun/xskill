@@ -1,140 +1,60 @@
+use crate::skill_manager::CENTRAL_SKILLS_DIR;
 use std::fs;
-use std::path::Path;
-use std::process::Command;
+use std::path::PathBuf;
 
-#[tauri::command]
-pub fn create_skill_template(
-    name: String,
-    desc: String,
-    lang: String,
-    target_dir: String,
-) -> Result<(), String> {
-    let target_path = Path::new(&target_dir).join(&name);
-
-
-    if let Err(e) = fs::create_dir_all(&target_path) {
-        return Err(format!("Failed to create directory: {}", e));
+fn tool_skills_dir(tool_key: &str) -> Option<PathBuf> {
+    let home = dirs::home_dir()?;
+    if tool_key == "xskill" || tool_key == "local" {
+        return Some(home.join(CENTRAL_SKILLS_DIR));
     }
-
-    if lang == "ts" {
-
-        let package_json = format!(
-            r#"{{
-  "name": "{}",
-  "version": "0.1.0",
-  "description": "{}",
-  "type": "module",
-  "main": "dist/index.js",
-  "scripts": {{
-    "build": "tsc",
-    "start": "node dist/index.js"
-  }},
-  "dependencies": {{
-    "@modelcontextprotocol/sdk": "latest"
-  }},
-  "devDependencies": {{
-    "typescript": "^5.0.0",
-    "@types/node": "^20.0.0"
-  }}
-}}"#,
-            name, desc
-        );
-        if let Err(e) = fs::write(target_path.join("package.json"), package_json) {
-            return Err(format!("Failed to write package.json: {}", e));
-        }
-
-
-        let tsconfig_json = r#"{
-  "compilerOptions": {
-    "target": "ES2022",
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
-    "outDir": "./dist",
-    "rootDir": "./src",
-    "strict": true,
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true
-  },
-  "include": ["src/**/*"]
-}"#;
-        if let Err(e) = fs::write(target_path.join("tsconfig.json"), tsconfig_json) {
-            return Err(format!("Failed to write tsconfig.json: {}", e));
-        }
-
-
-        let src_path = target_path.join("src");
-        if let Err(e) = fs::create_dir_all(&src_path) {
-            return Err(format!("Failed to create src directory: {}", e));
-        }
-
-
-        let index_ts = r#"import { Server } from "@modelcontextprotocol/sdk/server/index.js";
-import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-
-const server = new Server(
-  {
-    name: "my-skill",
-    version: "0.1.0",
-  },
-  {
-    capabilities: {
-      tools: {},
-    },
-  }
-);
-
-async function main() {
-  const transport = new StdioServerTransport();
-  await server.connect(transport);
-  console.error("Skill server running on stdio");
+    let subdir = match tool_key {
+        "cursor"         => ".cursor/skills",
+        "claude_code"    => ".claude/skills",
+        "opencode"       => ".config/opencode/skills",
+        "windsurf"       => ".codeium/windsurf/skills",
+        "gemini_cli"     => ".gemini/skills",
+        "github_copilot" => ".copilot/skills",
+        "amp"            => ".config/agents/skills",
+        "goose"          => ".config/goose/skills",
+        "antigravity"    => ".gemini/antigravity/global_skills",
+        "augment"        => ".augment/rules",
+        "codex"          => ".codex/skills",
+        "kimi_cli"       => ".kimi/skills",
+        "openclaw"       => ".openclaw/skills",
+        "cline"          => ".cline/skills",
+        "codebuddy"      => ".codebuddy/skills",
+        "continue_dev"   => ".continue/skills",
+        "crush"          => ".crush/skills",
+        "junie"          => ".junie/skills",
+        "kode"           => ".kode/skills",
+        "roo_code"       => ".roo-code/skills",
+        "kilo_code"      => ".kilocode/skills",
+        _ => return None,
+    };
+    Some(home.join(subdir))
 }
 
-main().catch((error) => {
-  console.error("Server error:", error);
-  process.exit(1);
-});
-"#;
-        if let Err(e) = fs::write(src_path.join("index.ts"), index_ts) {
-            return Err(format!("Failed to write index.ts: {}", e));
-        }
-    } else {
+#[tauri::command]
+pub fn create_skill(
+    name: String,
+    description: String,
+    tool_key: String,
+    content: String,
+) -> Result<String, String> {
+    let skills_dir = tool_skills_dir(&tool_key)
+        .ok_or_else(|| format!("Unknown tool key: {}", tool_key))?;
 
-        let readme = format!("# {}\n\n{}", name, desc);
-        if let Err(e) = fs::write(target_path.join("README.md"), readme) {
-            return Err(format!("Failed to write README.md: {}", e));
-        }
-    }
+    let skill_dir = skills_dir.join(&name);
+    fs::create_dir_all(&skill_dir)
+        .map_err(|e| format!("Failed to create skill directory: {}", e))?;
 
+    let skill_md = format!(
+        "---\nname: {}\ndescription: {}\n---\n\n{}",
+        name, description, content
+    );
+    let skill_md_path = skill_dir.join("SKILL.md");
+    fs::write(&skill_md_path, skill_md)
+        .map_err(|e| format!("Failed to write SKILL.md: {}", e))?;
 
-    let git_status = Command::new("git")
-        .arg("init")
-        .current_dir(&target_path)
-        .status()
-        .map_err(|e| format!("Failed to execute git init: {}", e))?;
-
-    if !git_status.success() {
-        return Err("git init failed".to_string());
-    }
-
-
-    if lang == "ts" {
-        let npm_cmd = if cfg!(target_os = "windows") {
-            "npm.cmd"
-        } else {
-            "npm"
-        };
-
-        let npm_status = Command::new(npm_cmd)
-            .arg("install")
-            .current_dir(&target_path)
-            .status()
-            .map_err(|e| format!("Failed to execute npm install: {}", e))?;
-
-        if !npm_status.success() {
-            return Err("npm install failed".to_string());
-        }
-    }
-
-    Ok(())
+    Ok(skill_dir.to_string_lossy().to_string())
 }

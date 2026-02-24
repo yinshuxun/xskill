@@ -1,67 +1,44 @@
 import { useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { open } from "@tauri-apps/plugin-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import type { Tool } from "@/hooks/useAppStore";
 
 interface NewSkillDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onCreated?: (skill: { id: string; name: string; desc: string; skill_type: string; status: string; path: string }) => void;
+  tools: Tool[];
+  onCreated: () => void;
 }
 
-export function NewSkillDialog({ isOpen, onClose, onCreated }: NewSkillDialogProps) {
+export function NewSkillDialog({ isOpen, onClose, tools, onCreated }: NewSkillDialogProps) {
   const [name, setName] = useState("");
-  const [desc, setDesc] = useState("");
-  const [lang, setLang] = useState("ts");
-  const [targetDir, setTargetDir] = useState("");
+  const [description, setDescription] = useState("");
+  const [toolKey, setToolKey] = useState(tools[0]?.key ?? "");
+  const [instructions, setInstructions] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
   if (!isOpen) return null;
 
-  const handleBrowse = async () => {
-    try {
-      const selected = await open({
-        directory: true,
-        multiple: false,
-      });
-      if (selected && typeof selected === "string") {
-        setTargetDir(selected);
-      }
-    } catch (error) {
-      console.error("Failed to open directory picker:", error);
-    }
-  };
-
   const handleCreate = async () => {
-    if (!name || !targetDir) {
-      alert("Name and Target Directory are required.");
+    if (!name.trim() || !toolKey) {
+      alert("Name and Target Tool are required.");
       return;
     }
 
     setIsLoading(true);
     try {
-      const skillPath = `${targetDir}/${name}`;
-      await invoke("create_skill_template", {
-        name,
-        desc,
-        lang,
-        targetDir,
+      await invoke("create_skill", {
+        name: name.trim(),
+        description: description.trim(),
+        toolKey,
+        content: instructions,
       });
-      onCreated?.({
-        id: crypto.randomUUID(),
-        name,
-        desc,
-        skill_type: "Internal",
-        status: "Active",
-        path: skillPath,
-      });
-      alert(`Successfully created skill: ${name}`);
-      onClose();
+      onCreated();
       setName("");
-      setDesc("");
-      setLang("ts");
-      setTargetDir("");
+      setDescription("");
+      setInstructions("");
+      setToolKey(tools[0]?.key ?? "");
     } catch (error) {
       alert(`Failed to create skill: ${error}`);
     } finally {
@@ -75,7 +52,7 @@ export function NewSkillDialog({ isOpen, onClose, onCreated }: NewSkillDialogPro
         <div>
           <h2 className="text-xl font-semibold">Create New Skill</h2>
           <p className="text-sm text-muted-foreground mt-1">
-            Scaffold a new skill template in your chosen directory.
+            Creates a SKILL.md file in the selected tool's skills directory.
           </p>
         </div>
 
@@ -83,7 +60,7 @@ export function NewSkillDialog({ isOpen, onClose, onCreated }: NewSkillDialogPro
           <div className="space-y-2">
             <label className="text-sm font-medium">Name</label>
             <Input
-              placeholder="e.g. my-awesome-skill"
+              placeholder="e.g. explain-code"
               value={name}
               onChange={(e) => setName(e.target.value)}
               disabled={isLoading}
@@ -93,57 +70,39 @@ export function NewSkillDialog({ isOpen, onClose, onCreated }: NewSkillDialogPro
           <div className="space-y-2">
             <label className="text-sm font-medium">Description</label>
             <Input
-              placeholder="Brief description of what this skill does"
-              value={desc}
-              onChange={(e) => setDesc(e.target.value)}
+              placeholder="What this skill does, when to use it"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
               disabled={isLoading}
             />
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-medium">Language</label>
-            <div className="flex items-center space-x-4">
-              <label className="flex items-center space-x-2 cursor-pointer">
-                <input
-                  type="radio"
-                  name="lang"
-                  value="ts"
-                  checked={lang === "ts"}
-                  onChange={(e) => setLang(e.target.value)}
-                  disabled={isLoading}
-                  className="accent-primary"
-                />
-                <span className="text-sm">TypeScript</span>
-              </label>
-              <label className="flex items-center space-x-2 cursor-pointer">
-                <input
-                  type="radio"
-                  name="lang"
-                  value="python"
-                  checked={lang === "python"}
-                  onChange={(e) => setLang(e.target.value)}
-                  disabled={isLoading}
-                  className="accent-primary"
-                />
-                <span className="text-sm">Python</span>
-              </label>
-            </div>
+            <label className="text-sm font-medium">Target Tool</label>
+            <select
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
+              value={toolKey}
+              onChange={(e) => setToolKey(e.target.value)}
+              disabled={isLoading || tools.length === 0}
+            >
+              {tools.length === 0 && <option value="">No tools detected</option>}
+              {tools.map((t) => (
+                <option key={t.key} value={t.key}>
+                  {t.display_name}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-medium">Target Directory</label>
-            <div className="flex space-x-2">
-              <Input
-                readOnly
-                placeholder="Select a directory..."
-                value={targetDir}
-                className="flex-1 bg-muted/50"
-                disabled={isLoading}
-              />
-              <Button variant="secondary" onClick={handleBrowse} disabled={isLoading}>
-                Browse
-              </Button>
-            </div>
+            <label className="text-sm font-medium">Instructions</label>
+            <textarea
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50 min-h-[120px] resize-y"
+              placeholder="Write the skill instructions in Markdown…"
+              value={instructions}
+              onChange={(e) => setInstructions(e.target.value)}
+              disabled={isLoading}
+            />
           </div>
         </div>
 
@@ -151,8 +110,8 @@ export function NewSkillDialog({ isOpen, onClose, onCreated }: NewSkillDialogPro
           <Button variant="ghost" onClick={onClose} disabled={isLoading}>
             Cancel
           </Button>
-          <Button onClick={handleCreate} disabled={isLoading}>
-            {isLoading ? "Creating..." : "Create"}
+          <Button onClick={handleCreate} disabled={isLoading || tools.length === 0}>
+            {isLoading ? "Creating…" : "Create"}
           </Button>
         </div>
       </div>
