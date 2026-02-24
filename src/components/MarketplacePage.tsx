@@ -1,15 +1,24 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { open } from "@tauri-apps/plugin-dialog";
+import { listen } from "@tauri-apps/api/event";
 import { Button } from "@/components/ui/button";
-import { Card, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardFooter, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CloudDownload, RefreshCw, AlertCircle } from "lucide-react";
+import { CloudDownload, RefreshCw, AlertCircle, Star, GitFork, Search } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { FixedSizeGrid as Grid } from "react-window";
+import { AutoSizer } from "react-virtualized-auto-sizer";
 
-interface RemoteSkill {
+interface MarketplaceSkill {
+  id: string;
   name: string;
+  author: string;
+  authorAvatar: string;
   description: string;
-  repo_url: string;
+  githubUrl: string;
+  stars: number;
+  forks: number;
+  updatedAt: number;
   tags?: string[];
 }
 
@@ -19,178 +28,246 @@ interface FeedEntry {
   url: string;
 }
 
-interface MarketplacePageProps {
-  feeds: FeedEntry[];
+interface CellData {
+  skills: MarketplaceSkill[];
+  columnCount: number;
+  installingId: string | null;
+  importProgress: string;
+  onInstall: (skill: MarketplaceSkill) => void;
 }
 
-import { Input } from "@/components/ui/input";
+const GUTTER_SIZE = 24;
+const ROW_HEIGHT = 280;
 
-export function MarketplacePage({ feeds }: MarketplacePageProps) {
-  const [skills, setSkills] = useState<RemoteSkill[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [installingId, setInstallingId] = useState<string | null>(null);
-  const [directUrl, setDirectUrl] = useState("");
+const SkillCell = ({ columnIndex, rowIndex, style, data }: { columnIndex: number; rowIndex: number; style: React.CSSProperties; data: CellData }) => {
+  const { skills, columnCount, installingId, importProgress, onInstall } = data;
+  const index = rowIndex * columnCount + columnIndex;
+  
+  if (index >= skills.length) return null;
+  const skill = skills[index];
 
-  const fetchAllFeeds = async () => {
-    setLoading(true);
-    setError(null);
-    const results: RemoteSkill[] = [];
-
-    for (const feed of feeds) {
-      try {
-        const data = await invoke<{ skills: RemoteSkill[] }>("fetch_feed", {
-          url: feed.url,
-        });
-        if (Array.isArray(data?.skills)) {
-          results.push(...data.skills);
-        }
-      } catch {
-        // ignore
-      }
-    }
-
-    if (results.length === 0 && feeds.length > 0) {
-      setError("No skills found. Your feed URLs may be unreachable or empty.");
-    }
-
-    setSkills(results);
-    setLoading(false);
-  };
-
-  useEffect(() => {
-    fetchAllFeeds();
-  }, [feeds]);
-
-  const handleInstall = async (skill: RemoteSkill) => {
-    const targetDir = await open({ directory: true, multiple: false, title: "Choose install directory" });
-    if (!targetDir) return;
-
-    setInstallingId(skill.repo_url);
-    try {
-      await invoke("clone_skill", {
-        repoUrl: skill.repo_url,
-        targetDir: `${targetDir}/${skill.name}`,
-      });
-      alert(`✅ "${skill.name}" installed successfully!`);
-    } catch (err) {
-      alert(`❌ Install failed: ${err}`);
-    } finally {
-      setInstallingId(null);
-    }
-  };
-
-  const handleDirectInstall = async () => {
-    if (!directUrl) return;
-    
-    const match = directUrl.match(/github\.com\/([^/]+)\/([^/]+)/);
-    if (!match) {
-      alert("Invalid GitHub URL. Must be like https://github.com/owner/repo");
-      return;
-    }
-    
-    setInstallingId(directUrl);
-    try {
-      const path = await invoke<string>("install_skill_from_url", {
-        repoUrl: directUrl,
-      });
-      alert(`✅ Installed successfully to Hub!\nPath: ${path}`);
-      setDirectUrl("");
-    } catch (err) {
-      alert(`❌ Install failed: ${err}`);
-    } finally {
-      setInstallingId(null);
-    }
+  // Adjust style to create gaps
+  const cellStyle = {
+    ...style,
+    left: Number(style.left) + GUTTER_SIZE / 2,
+    top: Number(style.top) + GUTTER_SIZE / 2,
+    width: Number(style.width) - GUTTER_SIZE,
+    height: Number(style.height) - GUTTER_SIZE,
   };
 
   return (
-    <div>
-      <div className="mb-6 flex items-start justify-between">
+    <div style={cellStyle}>
+      <Card className="flex flex-col h-full hover:border-primary/50 transition-colors">
+        <CardHeader className="pb-3">
+          <div className="flex justify-between items-start gap-2">
+            <div className="flex items-center gap-2 overflow-hidden">
+              <img src={skill.authorAvatar} alt={skill.author} className="h-6 w-6 rounded-full shrink-0" />
+              <CardTitle className="text-lg leading-tight truncate" title={skill.name}>{skill.name}</CardTitle>
+            </div>
+            <Badge variant="secondary" className="shrink-0 font-mono text-[10px]">
+              v{new Date(skill.updatedAt * 1000).toLocaleDateString()}
+            </Badge>
+          </div>
+          <div className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+              by <span className="font-medium text-foreground">{skill.author}</span>
+          </div>
+        </CardHeader>
+        <CardContent className="flex-1 pb-3">
+            <p className="text-sm text-muted-foreground line-clamp-3 mb-3" title={skill.description}>
+              {skill.description}
+            </p>
+            <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                <div className="flex items-center gap-1">
+                    <Star className="h-3 w-3" />
+                    {skill.stars.toLocaleString()}
+                </div>
+                <div className="flex items-center gap-1">
+                    <GitFork className="h-3 w-3" />
+                    {skill.forks.toLocaleString()}
+                </div>
+            </div>
+        </CardContent>
+        <CardFooter className="pt-3 border-t border-border/50">
+          <div className="w-full flex flex-col gap-2">
+              <Button
+              className="w-full"
+              size="sm"
+              disabled={!!installingId}
+              onClick={() => onInstall(skill)}
+              >
+              {installingId === skill.githubUrl ? (
+                  <>
+                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> Installing…
+                  </>
+              ) : (
+                  <>
+                  <CloudDownload className="mr-2 h-4 w-4" /> Install to Hub
+                  </>
+              )}
+              </Button>
+              {installingId === skill.githubUrl && importProgress && (
+                  <div className="text-xs text-center text-muted-foreground truncate px-1 animate-pulse">
+                     {importProgress}
+                  </div>
+              )}
+          </div>
+        </CardFooter>
+      </Card>
+    </div>
+  );
+};
+
+export function MarketplacePage() {
+  const [skills, setSkills] = useState<MarketplaceSkill[]>([]);
+  const [filteredSkills, setFilteredSkills] = useState<MarketplaceSkill[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [installingId, setInstallingId] = useState<string | null>(null);
+  const [importProgress, setImportProgress] = useState<string>("");
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const fetchMarketplace = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      let data;
+      try {
+        const response = await fetch("/data/marketplace.json");
+        if (!response.ok) throw new Error("Local data not found");
+        data = await response.json();
+      } catch {
+        const response = await fetch("https://raw.githubusercontent.com/buzhangsan/skills-manager-client/master/public/data/marketplace.json");
+        data = await response.json();
+      }
+
+      if (Array.isArray(data)) {
+        setSkills(data);
+        setFilteredSkills(data);
+      } else {
+        setError("Invalid data format received.");
+      }
+    } catch {
+      setError("Failed to load marketplace data. Please check your internet connection.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchMarketplace();
+  }, []);
+
+  useEffect(() => {
+    const query = searchQuery.toLowerCase();
+    const filtered = skills.filter(
+      (skill) =>
+        skill.name.toLowerCase().includes(query) ||
+        skill.description.toLowerCase().includes(query) ||
+        skill.author.toLowerCase().includes(query)
+    );
+    setFilteredSkills(filtered);
+  }, [searchQuery, skills]);
+
+  const handleInstall = async (skill: MarketplaceSkill) => {
+    setInstallingId(skill.githubUrl);
+    setImportProgress("Starting...");
+    
+    const unlisten = await listen<string>("import-progress", (event) => {
+      setImportProgress(event.payload);
+    });
+
+    try {
+      await invoke("install_skill_from_url", {
+        repoUrl: skill.githubUrl,
+      });
+      alert(`✅ "${skill.name}" installed successfully to XSkill Hub!`);
+    } catch (err) {
+      alert(`❌ Install failed: ${err}`);
+    } finally {
+      unlisten();
+      setInstallingId(null);
+      setImportProgress("");
+    }
+  };
+
+  const itemData = useMemo<CellData>(() => ({
+    skills: filteredSkills,
+    columnCount: 1, // Will be overridden by grid render
+    installingId,
+    importProgress,
+    onInstall: handleInstall
+  }), [filteredSkills, installingId, importProgress]);
+
+  return (
+    <div className="flex flex-col h-full">
+      <div className="mb-6 flex items-center justify-between gap-4 shrink-0">
         <div>
           <h2 className="text-2xl font-semibold">Marketplace</h2>
           <p className="text-muted-foreground text-sm mt-1">
-            Discover and install skills from your configured feed sources.
+            Discover open-source skills from the community.
           </p>
         </div>
-        <Button variant="outline" size="sm" onClick={fetchAllFeeds} disabled={loading}>
-          <RefreshCw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-          Refresh
-        </Button>
-      </div>
-
-      <Card className="mb-8 p-4 bg-muted/30">
-        <h3 className="text-sm font-medium mb-2 flex items-center gap-2">
-          <CloudDownload className="h-4 w-4" /> Install from GitHub
-        </h3>
-        <div className="flex gap-2">
-          <Input 
-            placeholder="https://github.com/owner/repo" 
-            value={directUrl} 
-            onChange={(e) => setDirectUrl(e.target.value)} 
-            className="bg-background"
-          />
-          <Button onClick={handleDirectInstall} disabled={!directUrl || !!installingId}>
-            {installingId === directUrl ? <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> : "Install"}
-          </Button>
+        <div className="flex items-center gap-2 flex-1 justify-end max-w-md">
+            <div className="relative w-full">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input 
+                    placeholder="Search skills..." 
+                    className="pl-9 bg-background"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                />
+            </div>
+            <Button variant="outline" size="icon" onClick={fetchMarketplace} disabled={loading}>
+                <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+            </Button>
         </div>
-      </Card>
+      </div>
 
       {loading && (
         <div className="flex items-center justify-center py-20 text-muted-foreground text-sm">
-          <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> Fetching feeds...
+          <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> Loading marketplace...
         </div>
       )}
 
       {!loading && error && (
-        <div className="flex items-center gap-2 text-sm text-muted-foreground py-10">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground py-10 justify-center">
           <AlertCircle className="h-4 w-4 text-destructive" />
           {error}
         </div>
       )}
 
-      {!loading && !error && skills.length === 0 && (
+      {!loading && !error && filteredSkills.length === 0 && (
         <div className="py-16 text-center text-muted-foreground text-sm">
-          <CloudDownload className="mx-auto h-8 w-8 mb-3 opacity-40" />
-          <p>No skills found. Add feed sources in Settings.</p>
+          <p>No skills found matching your search.</p>
         </div>
       )}
 
-      {!loading && skills.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {skills.map((skill) => (
-            <Card key={skill.repo_url} className="flex flex-col">
-              <CardHeader>
-                <div className="flex justify-between items-start gap-2">
-                  <CardTitle className="text-lg leading-tight">{skill.name}</CardTitle>
-                  {skill.tags?.slice(0, 1).map((tag) => (
-                    <Badge key={tag} variant="secondary" className="shrink-0">
-                      {tag}
-                    </Badge>
-                  ))}
-                </div>
-                <p className="text-sm text-muted-foreground">{skill.description}</p>
-                <p className="text-xs text-muted-foreground/60 truncate mt-1">{skill.repo_url}</p>
-              </CardHeader>
-              <CardFooter className="mt-auto pt-4 border-t border-border/50">
-                <Button
-                  className="w-full"
-                  size="sm"
-                  disabled={installingId === skill.repo_url}
-                  onClick={() => handleInstall(skill)}
-                >
-                  {installingId === skill.repo_url ? (
-                    <>
-                      <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> Installing…
-                    </>
-                  ) : (
-                    <>
-                      <CloudDownload className="mr-2 h-4 w-4" /> Install
-                    </>
-                  )}
-                </Button>
-              </CardFooter>
-            </Card>
-          ))}
+      {!loading && !error && filteredSkills.length > 0 && (
+        <div className="flex-1 min-h-0">
+            <AutoSizer>
+                {({ height, width }: { height: number; width: number }) => {
+                    const columnCount = Math.floor(width / 320) || 1;
+                    const columnWidth = width / columnCount;
+                    const rowCount = Math.ceil(filteredSkills.length / columnCount);
+                    
+                    // Update itemData with correct columnCount for index calculation
+                    const currentItemData = { ...itemData, columnCount };
+
+                    return (
+                        <Grid
+                            columnCount={columnCount}
+                            columnWidth={columnWidth}
+                            height={height}
+                            rowCount={rowCount}
+                            rowHeight={ROW_HEIGHT}
+                            width={width}
+                            itemData={currentItemData}
+                        >
+                            {SkillCell}
+                        </Grid>
+                    );
+                }}
+            </AutoSizer>
         </div>
       )}
     </div>

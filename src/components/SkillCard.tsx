@@ -4,14 +4,12 @@ import { Card, CardHeader, CardTitle, CardDescription, CardFooter, CardContent }
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Wrench, RefreshCw, Link as LinkIcon, ArrowUpCircle, Folder, Trash2 } from "lucide-react";
-import { AgentIcons } from "@/components/ui/icons";
 import { Tooltip } from "@/components/ui/tooltip-simple";
 import type { LocalSkill, Tool } from "@/hooks/useAppStore";
 
 export function SkillCard({ 
   skill, 
   tools,
-  syncedTools = [],
   onConfigure,
   onRefresh
 }: { 
@@ -75,13 +73,6 @@ export function SkillCard({
     }
   };
 
-  // Determine which badges to show
-  // If it's a Hub skill, show all tools that have a copy/link of this skill
-  // If it's an Agent skill, primarily show that agent
-  const displayedTools = syncedTools.length > 0 
-    ? syncedTools 
-    : (tier !== "Hub" && skill.tool_key ? tools.filter(t => t.key === skill.tool_key) : []);
-
   return (
     <Card className="flex flex-col group hover:border-primary/50 transition-colors duration-300 relative overflow-hidden">
       {/* Subtle gradient background on hover */}
@@ -105,17 +96,15 @@ export function SkillCard({
           <span className="truncate">{skill.path.replace(/\/Users\/[^/]+/, '~')}</span>
         </div>
         
-        {/* Agent Badges */}
-        <div className="flex flex-wrap gap-1.5 mt-3 min-h-[24px]">
-          {displayedTools.map(t => {
-            const Icon = AgentIcons[t.key as keyof typeof AgentIcons] || AgentIcons.cursor;
-            return (
-              <div key={t.key} className="h-6 w-6 rounded-md bg-secondary flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-colors cursor-help" title={`Synced to ${t.display_name}`}>
-                <Icon className="h-3.5 w-3.5" />
-              </div>
-            );
-          })}
-        </div>
+        {syncedTools && syncedTools.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 mt-3">
+            {syncedTools.map(tool => (
+              <Badge key={tool.key} variant="outline" className="text-[10px] h-5 px-2 border-primary/20 bg-primary/5 text-primary font-normal">
+                {tool.display_name}
+              </Badge>
+            ))}
+          </div>
+        )}
       </CardContent>
 
       <CardFooter className="mt-auto pt-4 pb-3 border-t border-border/50 flex justify-between items-center bg-card/50">

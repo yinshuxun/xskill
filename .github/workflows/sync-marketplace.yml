@@ -1,0 +1,75 @@
+name: Sync Marketplace Data
+
+on:
+  schedule:
+    # 每天 00:00 UTC (北京时间 08:00) 运行
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+    # 允许手动触发
+    inputs:
+      source_repo:
+        description: 'Source repository (owner/repo)'
+        required: true
+        default: 'buzhangsan/skills-manager-client'
+      file_path:
+        description: 'Path to marketplace.json in source repo'
+        required: true
+        default: 'public/data/marketplace.json'
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout this repository
+        uses: actions/checkout@v4
+
+      - name: Download marketplace.json
+        env:
+          # 如果源仓库是私有的，需要设置 PAT (Personal Access Token)
+          # 在仓库 Settings -> Secrets and variables -> Actions 中添加名为 SOURCE_REPO_PAT 的 secret
+          # 如果是公开仓库，这个 token 可以省略或留空
+          GITHUB_TOKEN: ${{ secrets.SOURCE_REPO_PAT || secrets.GITHUB_TOKEN }}
+        run: |
+          SOURCE_REPO="${{ github.event.inputs.source_repo || 'buzhangsan/skills-manager-client' }}"
+          FILE_PATH="${{ github.event.inputs.file_path || 'public/data/marketplace.json' }}"
+          
+          echo "Syncing $FILE_PATH from $SOURCE_REPO..."
+          
+          # 创建存放目录
+          mkdir -p public/data
+          
+          # 使用 GitHub API 获取文件内容 (支持私有仓库)
+          # 注意：API 返回的是 base64 编码的内容，需要解码
+          curl -L \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/$SOURCE_REPO/contents/$FILE_PATH" \
+            | jq -r .content | base64 --decode > public/data/marketplace.json
+            
+          # 验证文件是否为有效的 JSON
+          if jq empty public/data/marketplace.json > /dev/null 2>&1; then
+            echo "Successfully downloaded valid JSON."
+          else
+            echo "Error: Downloaded file is not valid JSON."
+            cat public/data/marketplace.json
+            exit 1
+          fi
+
+      - name: Commit and Push if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # 检查是否有变更
+          if [[ -n $(git status --porcelain public/data/marketplace.json) ]]; then
+            git add public/data/marketplace.json
+            git commit -m "chore: sync marketplace data from remote"
+            git push
+            echo "Changes pushed successfully."
+          else
+            echo "No changes detected."
+          fi
