@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { load } from "@tauri-apps/plugin-store";
+import { Store } from "@tauri-apps/plugin-store";
 
 export interface LocalSkill {
   name: string;
@@ -91,7 +91,7 @@ export function useAppStore() {
 
     (async () => {
       try {
-        const store = await load(STORE_FILE, { defaults: {} });
+        const store = await Store.load(STORE_FILE, { defaults: {} });
         const savedFeeds = await store.get<FeedEntry[]>(KEY_FEEDS);
         if (!cancelled && savedFeeds && savedFeeds.length > 0) {
           setFeedsState(savedFeeds);
@@ -116,7 +116,7 @@ export function useAppStore() {
   const persistFeeds = useCallback(async (updated: FeedEntry[]) => {
     setFeedsState(updated);
     try {
-      const store = await load(STORE_FILE, { defaults: {} });
+      const store = await Store.load(STORE_FILE, { defaults: {} });
       await store.set(KEY_FEEDS, updated);
       await store.save();
     } catch {

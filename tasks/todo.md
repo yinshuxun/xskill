@@ -94,6 +94,23 @@ This document tracks the development progress of XSkill.
 
 ---
 
+## Phase 5: v0.3.0 Iteration (Universal Agent Manager) 🚀
+*Goal: Transform xskill into a Universal Agent Skill Manager with global sync and health checks.*
+- [ ] **Universal Agent Sync**:
+    - [ ] Detect installed Agents (Cursor, Windsurf, Trae, VSCode) and their config paths.
+    - [ ] Allow syncing Suites/Skills to Agent's Global Scope (e.g., `~/.cursor/rules`).
+- [ ] **Symlink "Live" Mode**:
+    - [ ] Add "Link (Live Update)" option in Apply/Sync dialog.
+    - [ ] Implement backend symlink logic for cross-platform support.
+- [ ] **Enhanced Hub Management**:
+    - [ ] Distinct UI for "Hub Source" vs "Installed Instance".
+    - [ ] "Eject" command to convert Symlink to Copy.
+- [ ] **E2E Verification & Health**:
+    - [ ] **Health Check View**: Dashboard for agent installation status and path validity.
+    - [ ] **Verify Command**: Automated check if a skill is correctly installed and accessible by the agent.
+
+---
+
 ## Pending User Requests (To Be Scheduled)
 - [ ] Fix: Local skills not reading (Dependent on **3.1 Scanner**).
 - [ ] Fix: Skill store not reading (Dependent on **3.2 Marketplace**).

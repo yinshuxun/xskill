@@ -48,64 +48,26 @@ AI Agent 环境中的工具链版本（如 Cargo 1.93）与用户实际宿主机
 **解决方案**:
 近期许多库（如 `uuid`、`getrandom`）在升级时改为了只支持 Rust 2024 版本。当你的本地 Cargo 工具链被 `RUSTUP_TOOLCHAIN=stable` 限制或者较旧时，这些库会解析失败。
 解决办法是找出引入这些新版库的上游依赖，并强制将其降级到旧版。例如将 `uuid` 降级从而避免拉取 `getrandom v0.4.1`：
+
 ```bash
+# 精确降级 uuid 到 1.11.0 (最后一个不需要 getrandom v0.4.1 的版本)
 cargo update -p uuid --precise 1.11.0
 ```
-完成降级后，记得还要检查 `Cargo.lock` 是否被高版本的 Cargo 写成了 `version = 4`，必要时手动改回 `version = 3`。
-
-**教训**:
-当底层基础库（如 `getrandom`, `time` 等）更新导致 `edition 2024` 解析错误时，**降级引起它的父依赖**是唯一解。你可以通过 `cargo tree -i <被报错的依赖包名>` （例如 `cargo tree -i getrandom@0.4.1`）来找出是哪个包引入了它。
 
 ---
 
-## 4. Rust 版本过低导致的依赖构建失败
+## 4. Tauri Plugin Store v2 模块导出与 CI 构建失败
 
 **问题描述**:
-Cargo 报错 `package ... cannot be built because it requires rustc 1.77.2 or newer, while the currently active rustc version is 1.74.0`。
-常见报错库：
-- `tauri-plugin-store` v2.4.2 (需 1.77.2)
-- `toml_datetime` v0.7.5 (需 1.76)
+在 GitHub Actions 等 CI 环境中构建时，报错：
+> `Module '"@tauri-apps/plugin-store"' has no exported member 'load'.`
+而本地开发环境（如 v2.4.2）可能正常。
+
+这是因为 `@tauri-apps/plugin-store` 在 v2.0.0 左右的版本变动中，将顶层的 `load` 函数移除或更改了导出方式，改为推荐使用 `Store.load` 静态方法。如果 `package.json` 中使用 `~2.0.0` 且 CI 环境安装了严格的 v2.0.0 版本（可能缺少该导出），就会导致构建失败。
 
 **解决方案**:
-1. 在 `Cargo.toml` 中使用 `=` 符号锁定依赖的确切版本，防止 `cargo update` 拉取不兼容的新版本。
-   ```toml
-   tauri-plugin-store = "=2.0.0"
-   ```
-2. 对于传递依赖，使用 `cargo update -p <package> --precise <version>` 进行降级。
-   ```bash
-   cargo update -p toml_datetime --precise 0.6.5
-   ```
-
----
-
-## 5. Rust 工具链版本覆盖与 System Cargo 冲突
-
-**问题描述**:
-即使 `rustup --version` 和 `rustc --version` 显示已安装最新版 (如 1.93.1)，`cargo check` 仍然报错称当前 rustc 版本过低 (如 1.74.0)。这通常是因为：
-1. 项目目录下存在 `rust-toolchain.toml` 或 `rust-toolchain` 文件，强制指定了旧版本或 toolchain channel。
-2. 系统 PATH 中存在旧版本的 `cargo` 二进制文件（非 rustup shim），且优先级高于 `~/.cargo/bin`。
-
-**解决方案**:
-1. **检查并删除 `rust-toolchain.toml`**：如果不需要强制锁定旧版本，直接删除该文件，让项目使用系统默认的最新 Stable 工具链。
-2. **明确调用路径**：如果 PATH 混乱，直接使用绝对路径调用 cargo，例如 `~/.cargo/bin/cargo check`，确保使用的是 rustup 管理的版本。
-3. **清理 PATH**：检查 shell 配置文件，确保 `~/.cargo/bin` 在 PATH 的最前面。
+1. **使用标准 API**: 将 `import { load }` 改为 `import { Store }` 并使用 `await Store.load(...)`。这是 Tauri v2 的推荐用法。
+2. **放宽依赖版本**: 将 `package.json` 中的 `@tauri-apps/plugin-store` 版本从 `~2.0.0` 改为 `^2.0.0`，允许安装最新的次版本（如 v2.4.x），以获取修复和新功能。
 
 **教训**:
-当 `cargo --version` 和 `rustc --version` 不一致，或者报错信息中的 rustc 版本与你预期的不符时，首先怀疑 `rust-toolchain` 配置文件或 PATH 优先级问题。不要只看 `rustup show`，要看实际执行命令的是哪个二进制。
-
----
-
-## 6. Tauri v2 环境要求与版本对齐
-
-**问题描述**:
-1. **NPM 与 Rust 版本不匹配**: `npm run tauri dev` 报错 "Tauri version mismatch"，因为 `package.json` 中的 `@tauri-apps/plugin-*` 版本（如 `^2.6.0`）远高于 `src-tauri/Cargo.toml` 中的 Rust 插件版本（如 `2.0.0`）。Tauri 要求两者主次版本号一致。
-2. **Rust 版本过低**: 报错 `package ... cannot be built because it requires rustc 1.77.2 or newer` (如 `wry`, `tauri-runtime`)。Tauri v2 (2.0.0 正式版) 的最低 Rust 版本要求 (MSRV) 是 1.77.2 或更高。如果本地是 1.74.0，无法编译。
-
-**解决方案**:
-1. **对齐版本**: 修改 `package.json`，将 `@tauri-apps/plugin-*` 依赖锁定到与 Rust 端一致的版本（如 `~2.0.0`）。同时在 `Cargo.toml` 中使用 `=` 锁定 Rust 依赖（如 `tauri = "=2.0.0"`）。
-2. **升级 Rust**: Tauri v2 无法在 Rust 1.74.0 上编译。必须执行 `rustup update` 升级到最新 Stable 版本。降级 Tauri 到 v1 是不现实的（API 差异巨大）。
-
-**教训**:
-- 使用 Tauri v2 开发时，务必确保本地 Rust 环境至少为 1.78+。
-- 在 `package.json` 中使用 `~` 而不是 `^` 来锁定插件版本，避免自动升级导致与 Rust 端不匹配。
-- 遇到 "works in sandbox but not locally" 的情况，首先检查 `rustc --version`。
+当遇到 CI 与本地构建不一致时，首先检查 `package.json` 的版本约束（`~` vs `^`）和 `node_modules` 的实际安装版本。对于 Tauri 插件，优先使用类静态方法（如 `Store.load`）而非顶层函数，因为顶层函数的导出在不同版本间可能不稳定。

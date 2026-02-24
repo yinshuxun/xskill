@@ -1,21 +1,20 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Settings, CloudDownload, BookOpen, Plus, RefreshCw, ScanSearch, Box, Layers } from "lucide-react";
+import { Search, CloudDownload, BookOpen, Plus, RefreshCw, ScanSearch, Box, Layers } from "lucide-react";
 import { NewSkillDialog } from "@/components/NewSkillDialog";
 import { OnboardingDialog } from "@/components/OnboardingDialog";
 import { SkillConfigDialog } from "@/components/SkillConfigDialog";
-import { SettingsPage } from "@/components/SettingsPage";
 import { MarketplacePage } from "@/components/MarketplacePage";
 import { ProjectsPage } from "@/components/ProjectsPage";
 import { useAppStore, type LocalSkill } from "@/hooks/useAppStore";
 import { SuitesPage } from "@/components/SuitesPage";
 import { SkillCard } from "@/components/SkillCard";
 
-type Page = "my-skills" | "marketplace" | "settings" | "projects" | "suites";
+type Page = "my-skills" | "marketplace" | "projects" | "suites";
 
 function App() {
-  const { skills, tools, feeds, loadingSkills, persistFeeds, refreshSkills } = useAppStore();
+  const { skills, tools, feeds, loadingSkills, refreshSkills } = useAppStore();
   const [page, setPage] = useState<Page>("my-skills");
   const [searchQuery, setSearchQuery] = useState("");
   const [isNewSkillModalOpen, setIsNewSkillModalOpen] = useState(false);
@@ -33,7 +32,6 @@ function App() {
     { id: "projects", label: "Projects", icon: <Box className="mr-2 h-4 w-4" /> },
     { id: "marketplace", label: "Marketplace", icon: <CloudDownload className="mr-2 h-4 w-4" /> },
     { id: "suites", label: "Suites", icon: <Layers className="mr-2 h-4 w-4" /> },
-    { id: "settings", label: "Settings", icon: <Settings className="mr-2 h-4 w-4" /> },
   ];
 
   const installedTools = tools.filter((t) => t.installed);
@@ -140,8 +138,6 @@ function App() {
           {page === "suites" && <SuitesPage />}
 
           {page === "marketplace" && <MarketplacePage feeds={feeds} />}
-
-          {page === "settings" && <SettingsPage feeds={feeds} setFeeds={persistFeeds} />}
         </main>
       </div>
 
