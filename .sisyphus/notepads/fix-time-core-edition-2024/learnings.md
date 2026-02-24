@@ -1,0 +1,1 @@
+- When encountering 'this version of Cargo is older than the 2024 edition' for `time-core`, downgrade `time` to `0.3.36` using `cargo update -p time --precise 0.3.36`. This will downgrade `time-core` to `0.1.2` which uses edition 2021.

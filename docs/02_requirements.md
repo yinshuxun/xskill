@@ -1,0 +1,68 @@
+# Skill Hub for Mac - 产品需求文档 (PRD)
+
+## 1. 产品定位
+一款专为 Vibe Coding 开发者设计的 Mac 桌面端应用，用于本地化管理、创建、同步和发现 AI Skills (基于 MCP 协议)。主打轻量、极简、隐私安全。
+
+## 2. 核心用户场景
+- **场景 A (内部定制)**：开发者小王需要写一个读取公司内部知识库的 Skill，他使用 Skill Hub 快速创建模板，本地调试后，一键同步到自己的 OpenCode 中使用。
+- **场景 B (公共发现)**：开发者小李想找一个能操作 Figma 的 Skill，他在 Skill Hub 中搜索，工具通过爬虫从公共市场拉取了最新的 Figma MCP，小李点击“安装到 Cursor”，即可直接使用。
+- **场景 C (多工具切换)**：开发者小张同时使用 Cursor 和 Windsurf，他在 Skill Hub 中统一管理所有 Skills，任何修改都会自动同步到这两个 IDE 的配置文件中。
+
+---
+
+## 3. 需求清单 (Feature List)
+
+### 3.1 本地技能管理 (Local Skill Management)
+- **技能列表视图**：展示本地已安装的所有 Skills，包含名称、描述、图标、来源（本地创建/市场下载）、状态（启用/禁用）。
+- **技能详情页**：查看 Skill 的具体配置（环境变量、执行命令、参数说明）。
+- **快捷创建 (Scaffolding)**：
+  - 提供官方标准模板（TypeScript / Python）。
+  - 一键生成项目结构，自动执行 `npm install` 或 `pip install`。
+- **本地化存储**：所有配置和元数据存储在本地 SQLite 或 JSON 文件中，确保企业数据绝对安全。
+
+### 3.2 多 IDE 快捷同步 (IDE Integration)
+- **环境检测**：自动扫描 Mac 本地安装的 Vibe Coding 工具（支持 Cursor, OpenCode, Windsurf, Claude Desktop 等）。
+- **一键同步**：将选中的 Skills 配置（如 `mcp.json` 或 `claude_desktop_config.json`）自动注入到对应 IDE 的配置文件中。
+- **环境变量管理**：统一管理所有 Skills 需要的 API Keys 和敏感信息，同步时自动注入。
+
+### 3.3 市场聚合与爬虫 (Marketplace & Crawler)
+- **公共市场聚合**：内置爬虫模块，定期从主流供应商（如 skillsmp.com, smithery.ai, GitHub MCP 官方仓库）抓取热门 Skills。
+- **统一搜索**：在本地客户端内直接搜索全网 Skills。
+- **一键安装**：解析远程仓库，自动克隆代码、安装依赖并注册到本地库。
+
+### 3.4 内部技能分发与订阅 (Internal Skill Feeds)
+- **自定义订阅源**：允许用户在设置中添加自定义的 JSON 订阅源 URL（例如公司内部 GitLab 的 `registry.json` Raw URL）。
+- **多源聚合**：客户端将内置公共源与用户添加的内部源数据聚合展示，并使用标签（如 `[Public]`, `[Internal]`）进行区分。
+- **一键分享/发布**：当用户在本地使用“快捷创建”开发完一个 Skill 后，提供“分享到内部”按钮，自动生成配置代码并引导用户向内部 Git 仓库提交 PR。
+
+### 3.4 AI 智能搜索与推荐 (AI-Powered Search)
+- **自然语言搜索**：用户输入“帮我找一个能查天气的工具”，系统通过 AI 匹配最合适的 Skill。
+- **本地模型支持**：支持配置本地 Ollama 模型或 OpenAI/Anthropic API 进行语义搜索和推荐。
+### 3.6 极简 UI/UX 设计
+- **Mac 原生体验**：支持深色/浅色模式，毛玻璃效果，符合 macOS 设计规范。
+- **系统托盘 (Menu Bar)**：支持在 Mac 顶部状态栏快速切换和查看 Skills 状态。
+
+---
+
+## 4. 进度完成清单 (Roadmap & TODOs)
+
+### Phase 1: MVP (最小可行性产品)
+- [ ] 确定技术栈并初始化项目结构。
+- [ ] 实现本地 SQLite/JSON 存储逻辑。
+- [ ] 实现基础 UI：技能列表、添加/删除技能。
+- [ ] 实现 IDE 同步核心逻辑（解析和修改 Cursor/Claude 配置文件）。
+
+### Phase 2: 核心功能扩展
+- [ ] 实现“快捷创建”脚手架功能（TS/Python 模板）。
+- [ ] 实现环境变量统一管理面板。
+- [ ] 接入爬虫模块，抓取 GitHub 官方 MCP 仓库数据。
+
+### Phase 3: 智能化与全网聚合
+- [ ] 完善爬虫，接入 skillsmp.com 等第三方市场。
+- [ ] 接入 AI 模型配置界面，实现自然语言搜索。
+- [ ] 优化 UI 细节，添加系统托盘支持。
+
+### Phase 4: 自动化与发布
+- [ ] 配置 GitHub Actions 自动化测试。
+- [ ] 配置自动化构建流程，生成 Mac `.dmg` 安装包。
+- [ ] 编写用户使用手册和开源 README。

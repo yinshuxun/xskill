@@ -1,0 +1,1 @@
+- Tauri converts JS camelCase `ideName` and `mcpConfig` to Rust snake_case automatically when using `invoke`.

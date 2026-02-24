@@ -1,0 +1,1 @@
+{"root":["./src/app.tsx","./src/main.tsx","./src/components/marketplacepage.tsx","./src/components/newskilldialog.tsx","./src/components/settingspage.tsx","./src/components/ui/badge.tsx","./src/components/ui/button.tsx","./src/components/ui/card.tsx","./src/components/ui/input.tsx","./src/hooks/useappstore.ts","./src/lib/utils.ts"],"version":"5.9.3"}
