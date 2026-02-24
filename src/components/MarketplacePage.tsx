@@ -53,40 +53,40 @@ const SkillCell = ({ columnIndex, rowIndex, style, data }: { columnIndex: number
 
   return (
     <div style={cellStyle}>
-      <Card className="flex flex-col h-full hover:border-primary/50 transition-colors overflow-hidden">
-        <CardHeader className="pb-3 shrink-0">
-          <div className="flex justify-between items-start gap-2">
-            <div className="flex items-center gap-2 overflow-hidden">
-              <img src={skill.authorAvatar} alt={skill.author} className="h-6 w-6 rounded-full shrink-0" />
-              <CardTitle className="text-lg leading-tight truncate" title={skill.name}>{skill.name}</CardTitle>
+      <Card className="flex flex-col h-full hover:border-primary/50 transition-all duration-300 overflow-hidden shadow-sm hover:shadow-lg hover:shadow-primary/5 hover:-translate-y-1">
+        <CardHeader className="pb-3 shrink-0 space-y-2">
+          <div className="flex justify-between items-start gap-3">
+            <div className="flex items-center gap-2 overflow-hidden min-w-0">
+              <img src={skill.authorAvatar} alt={skill.author} className="h-7 w-7 rounded-full shrink-0 border border-border/50 shadow-sm" />
+              <CardTitle className="text-lg font-semibold leading-tight truncate" title={skill.name}>{skill.name}</CardTitle>
             </div>
-            <Badge variant="secondary" className="shrink-0 font-mono text-[10px]">
+            <Badge variant="secondary" className="shrink-0 font-mono text-[10px] px-2 h-5 bg-secondary/50 border border-border/50">
               v{new Date(skill.updatedAt * 1000).toLocaleDateString()}
             </Badge>
           </div>
-          <div className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
-              by <span className="font-medium text-foreground">{skill.author}</span>
+          <div className="text-xs font-medium text-muted-foreground mt-1 flex items-center gap-1">
+              by <span className="text-foreground">{skill.author}</span>
           </div>
         </CardHeader>
         <CardContent className="flex-1 pb-3 min-h-0 overflow-hidden">
-            <p className="text-sm text-muted-foreground line-clamp-3 mb-3" title={skill.description}>
+            <p className="text-sm text-muted-foreground/80 line-clamp-3 mb-4 leading-relaxed" title={skill.description}>
               {skill.description}
             </p>
-            <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                <div className="flex items-center gap-1">
-                    <Star className="h-3 w-3" />
+            <div className="flex items-center gap-4 text-xs font-medium text-muted-foreground">
+                <div className="flex items-center gap-1.5 bg-muted/30 px-2 py-1 rounded-md border border-border/30">
+                    <Star className="h-3.5 w-3.5 text-yellow-500" />
                     {skill.stars.toLocaleString()}
                 </div>
-                <div className="flex items-center gap-1">
-                    <GitFork className="h-3 w-3" />
+                <div className="flex items-center gap-1.5 bg-muted/30 px-2 py-1 rounded-md border border-border/30">
+                    <GitFork className="h-3.5 w-3.5" />
                     {skill.forks.toLocaleString()}
                 </div>
             </div>
         </CardContent>
-        <CardFooter className="pt-3 border-t border-border/50 shrink-0 bg-card">
+        <CardFooter className="pt-4 border-t border-border/40 shrink-0 bg-muted/20">
           <div className="w-full flex flex-col gap-2">
               <Button
-              className="w-full"
+              className="w-full shadow-sm transition-all hover:shadow-md font-medium"
               size="sm"
               disabled={!!installingId || isInstalled}
               onClick={() => onInstall(skill)}
@@ -98,7 +98,7 @@ const SkillCell = ({ columnIndex, rowIndex, style, data }: { columnIndex: number
                   </>
               ) : isInstalled ? (
                   <>
-                  <CheckCircle2 className="mr-2 h-4 w-4 text-green-500" /> Installed
+                  <CheckCircle2 className="mr-2 h-4 w-4 text-emerald-500" /> Installed
                   </>
               ) : (
                   <>

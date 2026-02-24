@@ -39,7 +39,8 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
+    /* Refined Light Mode: Slightly off-white background for better card contrast */
+    --background: 240 5% 98%; 
     --foreground: 240 10% 3.9%;
 
     --card: 0 0% 100%;
@@ -48,7 +49,7 @@
     --popover: 0 0% 100%;
     --popover-foreground: 240 10% 3.9%;
 
-    /* High Contrast Primary: Vivid Blue/Purple for Light Mode */
+    /* Vivid Primary Blue/Violet */
     --primary: 262 83% 58%;
     --primary-foreground: 210 40% 98%;
 
@@ -56,7 +57,7 @@
     --secondary-foreground: 240 5.9% 10%;
 
     --muted: 240 4.8% 95.9%;
-    --muted-foreground: 240 3.8% 46.1%;
+    --muted-foreground: 240 3.8% 46%;
 
     --accent: 240 4.8% 95.9%;
     --accent-foreground: 240 5.9% 10%;
@@ -68,23 +69,23 @@
     --input: 240 5.9% 90%;
     --ring: 262 83% 58%;
 
-    --radius: 0.5rem;
+    --radius: 0.75rem; /* More rounded corners for modern look */
   }
 
   .dark {
-    /* Geeky Dark Mode: Deep Black Background */
+    /* Deep Blue-Black Background */
     --background: 240 10% 4%;
     --foreground: 0 0% 98%;
 
-    --card: 240 10% 4%;
+    /* Slightly lighter cards for depth */
+    --card: 240 10% 6%;
     --card-foreground: 0 0% 98%;
 
-    --popover: 240 10% 4%;
+    --popover: 240 10% 6%;
     --popover-foreground: 0 0% 98%;
 
-    /* High Contrast Primary: Neon Green for Geeky/Hacker Vibe */
+    /* Neon Green/Teal for Dark Mode contrast */
     --primary: 142 70% 50%;
-    /* Black foreground on Neon Green for max contrast */
     --primary-foreground: 144 65% 5%;
 
     --secondary: 240 4% 16%;

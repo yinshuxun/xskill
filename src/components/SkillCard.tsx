@@ -75,32 +75,32 @@ export function SkillCard({
   };
 
   return (
-    <Card className="flex flex-col group hover:border-primary/50 transition-colors duration-300 relative overflow-hidden">
+    <Card className="flex flex-col group hover:border-primary/50 transition-all duration-300 relative overflow-hidden shadow-sm hover:shadow-lg hover:shadow-primary/5 hover:-translate-y-1">
       {/* Subtle gradient background on hover */}
       <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
       
-      <CardHeader className="pb-3">
-        <div className="flex justify-between items-start gap-2">
-          <div className="flex items-center gap-2">
-            <CardTitle className="text-lg leading-tight group-hover:text-primary transition-colors">{skill.name}</CardTitle>
+      <CardHeader className="pb-3 space-y-2">
+        <div className="flex justify-between items-start gap-3">
+          <div className="flex items-center gap-2 min-w-0">
+            <CardTitle className="text-lg font-semibold leading-tight group-hover:text-primary transition-colors truncate" title={skill.name}>{skill.name}</CardTitle>
           </div>
-          <Badge variant="secondary" className={`shrink-0 text-[10px] px-1.5 h-5 ${tierColor}`}>
+          <Badge variant="secondary" className={`shrink-0 text-[10px] px-2 h-5 font-medium ${tierColor}`}>
             {tier}
           </Badge>
         </div>
-        <CardDescription className="line-clamp-2 text-xs mt-1.5">{skill.description || "No description provided."}</CardDescription>
+        <CardDescription className="line-clamp-2 text-sm text-muted-foreground/80 h-10">{skill.description || "No description provided."}</CardDescription>
       </CardHeader>
       
       <CardContent className="py-0 flex-1">
-        <div className="flex items-center gap-1.5 mt-2 text-xs text-muted-foreground bg-muted/50 p-1.5 rounded-md font-mono truncate" title={skill.path}>
+        <div className="flex items-center gap-1.5 mt-2 text-xs text-muted-foreground/70 bg-muted/40 p-2 rounded-md font-mono truncate border border-border/30" title={skill.path}>
           <Folder className="h-3 w-3 shrink-0" />
           <span className="truncate">{skill.path.replace(/\/Users\/[^/]+/, '~')}</span>
         </div>
         
         {syncedTools && syncedTools.length > 0 && (
-          <div className="flex flex-wrap gap-1.5 mt-3">
+          <div className="flex flex-wrap gap-1.5 mt-4">
             {syncedTools.map(tool => (
-              <Badge key={tool.key} variant="outline" className="text-[10px] h-5 px-2 border-primary/20 bg-primary/5 text-primary font-normal">
+              <Badge key={tool.key} variant="outline" className="text-[10px] h-5 px-2 border-primary/20 bg-primary/5 text-primary font-normal shadow-sm">
                 {tool.display_name}
               </Badge>
             ))}
@@ -108,17 +108,17 @@ export function SkillCard({
         )}
       </CardContent>
 
-      <CardFooter className="mt-auto pt-4 pb-3 border-t border-border/50 flex justify-between items-center bg-card/50">
+      <CardFooter className="mt-4 pt-4 pb-4 border-t border-border/40 flex justify-between items-center bg-muted/20">
         <div className="flex gap-1">
           <Tooltip content="Configure Skill">
-            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" onClick={onConfigure}>
+            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors" onClick={onConfigure}>
               <Wrench className="h-4 w-4" />
             </Button>
           </Tooltip>
           
           {tier !== "Hub" && (
             <Tooltip content="Collect to Hub">
-              <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-purple-500" onClick={handleCollect}>
+              <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-purple-500 hover:bg-purple-500/10 transition-colors" onClick={handleCollect}>
                 <ArrowUpCircle className="h-4 w-4" />
               </Button>
             </Tooltip>
@@ -131,7 +131,7 @@ export function SkillCard({
               <Button 
                 variant="secondary" 
                 size="sm" 
-                className="h-8 text-xs font-medium bg-primary/10 text-primary hover:bg-primary/20"
+                className="h-8 text-xs font-medium bg-background border border-border/50 text-foreground hover:text-primary hover:border-primary/30 hover:bg-primary/5 shadow-sm transition-all"
                 onClick={() => setShowSyncMenu(!showSyncMenu)}
               >
                 <RefreshCw className="mr-1.5 h-3 w-3" /> Sync
