@@ -25,17 +25,12 @@
 ## 2. Cargo.lock 版本 4 与老版本环境的不兼容
 
 **问题描述**:
-在解决上述问题时，因为我们在 AI 的最新 Rust (1.93) 环境中执行了 `cargo update`，Cargo 自动将 `Cargo.lock` 文件的顶部标识重写为了 `version = 4`。
-结果导致用户在其老旧的本地终端环境执行 `npm run tauri dev` 时报错：
+在解决上述问题时，因为我们在 AI 的最新 Rust (1.93) 环境中执行了 `cargo update` 或 `cargo generate-lockfile`，Cargo 自动将 `Cargo.lock` 文件的顶部标识重写为了 `version = 4`。
+结果导致用户在其相对较老的本地终端环境（或被 `RUSTUP_TOOLCHAIN=stable` 限制为旧版本时）执行 `npm run tauri dev` 时报错：
 > `lock file version 4 was found, but this version of Cargo does not understand this lock file, perhaps Cargo needs to be updated?`
 
 **解决方案**:
-最直接稳定的方法是：由于环境里带有 `RUSTUP_TOOLCHAIN=stable` 的限制，直接删除由较高版本生成的 `Cargo.lock`，然后再由当前可用的工具链重新生成它：
-```bash
-rm src-tauri/Cargo.lock
-cd src-tauri && cargo generate-lockfile
-```
-这样 Cargo 就会根据当前的 Rust 工具链版本生成兼容格式（例如 version 3）的 lockfile。
+直接修改 `src-tauri/Cargo.lock` 文件头部，将 `version = 4` 降级改回 `version = 3`。因为 `version 3` 的语法完全兼容当前项目所需的大部分常见依赖结构。
 
 **教训**:
-当遇到 Cargo lock file version 报错时，不要急着去手动改数字 `version = 3`，因为文件内容结构可能也有差异。正确做法是**直接删除并重新生成** `Cargo.lock`，让当前工具链自己处理。这在跨环境开发、AI 协作开发时是一个非常高频的问题。
+AI Agent 环境中的工具链版本（如 Cargo 1.93）与用户实际宿主机的环境常常存在差异。千万不要自作聪明地用 "删除并重新生成 lockfile" 来试图解决——由于 AI 环境的 Cargo 版本太高，重新生成的仍然是 v4 格式，导致用户本地依然报错。**碰到这类问题，直接把 `Cargo.lock` 头部的 4 改成 3 是最稳妥也是最有效的向下兼容方法。**
