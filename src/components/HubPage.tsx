@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { RefreshCw, LayoutGrid, Search } from "lucide-react";
 import { SkillCard } from "@/components/SkillCard";
 import type { LocalSkill, Tool } from "@/hooks/useAppStore";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface HubPageProps {
   skills: LocalSkill[];
@@ -13,14 +14,24 @@ interface HubPageProps {
   onConfigure: (skill: LocalSkill) => void;
 }
 
+const containerVariants = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.05
+    }
+  }
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  show: { opacity: 1, y: 0, transition: { type: "spring" as const, stiffness: 300, damping: 24 } }
+};
+
 export function HubPage({ skills, loading, onRefresh, tools, onConfigure }: HubPageProps) {
   const [searchQuery, setSearchQuery] = useState("");
 
-  // Hub page shows ALL skills, primarily focusing on the central hub content
-  // In v0.3, this acts as the "Master List" of all skills available in the ecosystem
-  
-  // Filter for skills that are primarily in the Hub
-  // We identify Hub skills by their path containing .xskill/hub or .xskill/skills
   const hubSkills = skills.filter(
     (s) => (s.path.includes(".xskill/hub") || s.path.includes(".xskill/skills")) &&
            (s.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -31,57 +42,72 @@ export function HubPage({ skills, loading, onRefresh, tools, onConfigure }: HubP
 
   return (
     <>
-      <div className="mb-6 flex items-start justify-between gap-4">
+      <div className="mb-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
         <div>
-          <h2 className="text-2xl font-semibold">XSkill Hub</h2>
-          <p className="text-muted-foreground text-sm mt-1">
-            Manage all your skills in one place.
+          <h2 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">Central Hub</h2>
+          <p className="text-muted-foreground text-sm mt-1.5 font-medium">
+            Manage all your agent skills in the master repository.
           </p>
         </div>
-        <div className="flex items-center gap-2 flex-1 justify-end max-w-md">
-            <div className="relative w-full">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+        <div className="flex items-center gap-3 w-full md:max-w-md">
+            <div className="relative w-full group">
+                <Search className="absolute left-3.5 top-3 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
                 <Input 
                     placeholder="Search skills..." 
-                    className="pl-9 bg-background"
+                    className="pl-10 h-10 bg-background/50 border-border/50 rounded-xl shadow-sm focus-visible:ring-primary/20 transition-all"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                 />
             </div>
-            <Button variant="outline" size="icon" onClick={onRefresh} disabled={loading}>
+            <Button variant="outline" size="icon" onClick={onRefresh} disabled={loading} className="h-10 w-10 rounded-xl border-border/50 shadow-sm active:scale-95 transition-transform">
                 <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
             </Button>
         </div>
       </div>
 
       {loading && (
-        <div className="flex items-center justify-center py-20 text-muted-foreground text-sm">
-          <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> Loading skills…
+        <div className="flex flex-col items-center justify-center py-32 text-muted-foreground">
+          <RefreshCw className="h-6 w-6 animate-spin mb-4 text-primary" />
+          <p className="text-sm font-medium tracking-wide animate-pulse">Syncing ecosystem...</p>
         </div>
       )}
 
       {!loading && hubSkills.length === 0 && (
-        <div className="py-16 text-center text-muted-foreground text-sm border border-dashed rounded-lg">
-          <LayoutGrid className="mx-auto h-8 w-8 mb-3 opacity-40" />
-          <p>No skills found in the Hub.</p>
-          <p className="text-xs mt-1">Import skills or create a new one to get started.</p>
-        </div>
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="py-24 text-center text-muted-foreground/60 border border-dashed border-border/50 rounded-3xl bg-background/30"
+        >
+          <div className="h-16 w-16 mx-auto bg-muted/50 rounded-2xl flex items-center justify-center mb-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]">
+            <LayoutGrid className="h-8 w-8 opacity-50" />
+          </div>
+          <p className="text-base font-medium text-foreground/80">No skills found</p>
+          <p className="text-sm mt-1">Import from marketplace or craft a new one.</p>
+        </motion.div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {hubSkills.map((skill) => (
-          <SkillCard
-            key={skill.path}
-            skill={skill}
-            tools={tools}
-            syncedTools={installedTools.filter(
-              (t) => t.key !== skill.tool_key 
-            )}
-            onConfigure={() => onConfigure(skill)}
-            onRefresh={onRefresh}
-          />
-        ))}
-      </div>
+      <motion.div 
+        variants={containerVariants}
+        initial="hidden"
+        animate="show"
+        className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6"
+      >
+        <AnimatePresence mode="popLayout">
+          {hubSkills.map((skill) => (
+            <motion.div key={skill.path} variants={itemVariants} layoutId={skill.path}>
+              <SkillCard
+                skill={skill}
+                tools={tools}
+                syncedTools={installedTools.filter(
+                  (t) => t.key !== skill.tool_key 
+                )}
+                onConfigure={() => onConfigure(skill)}
+                onRefresh={onRefresh}
+              />
+            </motion.div>
+          ))}
+        </AnimatePresence>
+      </motion.div>
     </>
   );
 }

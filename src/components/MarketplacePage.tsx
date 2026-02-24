@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { FixedSizeGrid as Grid } from "react-window";
 import AutoSizer from "react-virtualized-auto-sizer";
 import { useAppStore } from "@/hooks/useAppStore";
+import { motion } from "framer-motion";
 
 interface MarketplaceSkill {
   id: string;
@@ -42,7 +43,6 @@ const SkillCell = ({ columnIndex, rowIndex, style, data }: { columnIndex: number
   const isInstalled = installedSkills.has(skill.name);
   const isInstalling = installingId === skill.githubUrl;
 
-  // Adjust style to create gaps
   const cellStyle = {
     ...style,
     left: Number(style.left) + GUTTER_SIZE / 2,
@@ -53,62 +53,70 @@ const SkillCell = ({ columnIndex, rowIndex, style, data }: { columnIndex: number
 
   return (
     <div style={cellStyle}>
-      <Card className="flex flex-col h-full hover:border-primary/50 transition-all duration-300 overflow-hidden shadow-sm hover:shadow-lg hover:shadow-primary/5 hover:-translate-y-1">
-        <CardHeader className="pb-3 shrink-0 space-y-2">
-          <div className="flex justify-between items-start gap-3">
-            <div className="flex items-center gap-2 overflow-hidden min-w-0">
-              <img src={skill.authorAvatar} alt={skill.author} className="h-7 w-7 rounded-full shrink-0 border border-border/50 shadow-sm" />
-              <CardTitle className="text-lg font-semibold leading-tight truncate" title={skill.name}>{skill.name}</CardTitle>
+      <motion.div
+        whileHover={{ y: -4, scale: 1.01 }}
+        transition={{ type: "spring" as const, stiffness: 400, damping: 30 }}
+        className="h-full"
+      >
+        <Card className="flex flex-col h-full bg-card shadow-[0_20px_40px_-15px_rgba(0,0,0,0.05)] hover:shadow-[0_30px_60px_-15px_rgba(0,0,0,0.08)] transition-all duration-300 rounded-3xl border-border/50 overflow-hidden">
+          <CardHeader className="pb-3 px-6 pt-6 shrink-0 space-y-2">
+            <div className="flex justify-between items-start gap-3">
+              <div className="flex items-center gap-2 overflow-hidden min-w-0">
+                <img src={skill.authorAvatar} alt={skill.author} className="h-7 w-7 rounded-full shrink-0 border border-border/50 shadow-sm" />
+                <CardTitle className="text-lg font-semibold leading-tight truncate tracking-tight text-foreground/90" title={skill.name}>{skill.name}</CardTitle>
+              </div>
+              <Badge variant="secondary" className="shrink-0 font-mono text-[10px] px-2 h-5 bg-secondary/50 border border-border/50 text-muted-foreground">
+                v{new Date(skill.updatedAt * 1000).toLocaleDateString()}
+              </Badge>
             </div>
-            <Badge variant="secondary" className="shrink-0 font-mono text-[10px] px-2 h-5 bg-secondary/50 border border-border/50">
-              v{new Date(skill.updatedAt * 1000).toLocaleDateString()}
-            </Badge>
-          </div>
-          <div className="text-xs font-medium text-muted-foreground mt-1 flex items-center gap-1">
-              by <span className="text-foreground">{skill.author}</span>
-          </div>
-        </CardHeader>
-        <CardContent className="flex-1 pb-3 min-h-0 overflow-hidden">
-            <p className="text-sm text-muted-foreground/80 line-clamp-3 mb-4 leading-relaxed" title={skill.description}>
-              {skill.description}
-            </p>
-            <div className="flex items-center gap-4 text-xs font-medium text-muted-foreground">
-                <div className="flex items-center gap-1.5 bg-muted/30 px-2 py-1 rounded-md border border-border/30">
-                    <Star className="h-3.5 w-3.5 text-yellow-500" />
-                    {skill.stars.toLocaleString()}
-                </div>
-                <div className="flex items-center gap-1.5 bg-muted/30 px-2 py-1 rounded-md border border-border/30">
-                    <GitFork className="h-3.5 w-3.5" />
-                    {skill.forks.toLocaleString()}
-                </div>
+            <div className="text-xs font-medium text-muted-foreground/80 mt-1 flex items-center gap-1">
+                by <span className="text-foreground/80">{skill.author}</span>
             </div>
-        </CardContent>
-        <CardFooter className="pt-4 border-t border-border/40 shrink-0 bg-muted/20">
-          <div className="w-full flex flex-col gap-2">
-              <Button
-              className="w-full shadow-sm transition-all hover:shadow-md font-medium"
-              size="sm"
-              disabled={!!installingId || isInstalled}
-              onClick={() => onInstall(skill)}
-              variant={isInstalled ? "secondary" : "default"}
-              >
-              {isInstalling ? (
-                  <>
-                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> Installing…
-                  </>
-              ) : isInstalled ? (
-                  <>
-                  <CheckCircle2 className="mr-2 h-4 w-4 text-emerald-500" /> Installed
-                  </>
-              ) : (
-                  <>
-                  <CloudDownload className="mr-2 h-4 w-4" /> Install to Hub
-                  </>
-              )}
-              </Button>
-          </div>
-        </CardFooter>
-      </Card>
+          </CardHeader>
+          <CardContent className="flex-1 px-6 pb-3 min-h-0 overflow-hidden">
+              <p className="text-sm text-muted-foreground/80 line-clamp-3 mb-5 leading-relaxed" title={skill.description}>
+                {skill.description}
+              </p>
+              <div className="flex items-center gap-3 text-xs font-medium text-muted-foreground">
+                  <div className="flex items-center gap-1.5 bg-muted/30 px-2 py-1 rounded-md border border-border/30 shadow-sm">
+                      <Star className="h-3.5 w-3.5 text-yellow-500" />
+                      {skill.stars.toLocaleString()}
+                  </div>
+                  <div className="flex items-center gap-1.5 bg-muted/30 px-2 py-1 rounded-md border border-border/30 shadow-sm">
+                      <GitFork className="h-3.5 w-3.5" />
+                      {skill.forks.toLocaleString()}
+                  </div>
+              </div>
+          </CardContent>
+          <CardFooter className="px-6 py-4 border-t border-border/30 shrink-0 bg-muted/5 rounded-b-3xl">
+            <div className="w-full flex flex-col gap-2">
+                <Button
+                className={`w-full shadow-sm hover:shadow-md font-medium transition-all rounded-xl active:scale-[0.98] ${
+                    isInstalled ? 'bg-secondary text-secondary-foreground hover:bg-secondary/80' : 'bg-primary text-primary-foreground hover:bg-primary/90'
+                }`}
+                size="default"
+                disabled={!!installingId || isInstalled}
+                onClick={() => onInstall(skill)}
+                variant="default"
+                >
+                {isInstalling ? (
+                    <>
+                    <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> Installing…
+                    </>
+                ) : isInstalled ? (
+                    <>
+                    <CheckCircle2 className="mr-2 h-4 w-4 text-emerald-500 dark:text-emerald-400" /> Installed
+                    </>
+                ) : (
+                    <>
+                    <CloudDownload className="mr-2 h-4 w-4" /> Install to Hub
+                    </>
+                )}
+                </Button>
+            </div>
+          </CardFooter>
+        </Card>
+      </motion.div>
     </div>
   );
 };
@@ -122,11 +130,9 @@ export function MarketplacePage() {
   const [installingId, setInstallingId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
 
-  // Create a set of installed skill names for fast lookup
   const installedSkillNames = useMemo(() => {
     const names = new Set<string>();
     localSkills.forEach(s => {
-        // Only count Hub skills as "Installed" in the marketplace context
         if (s.path.includes(".xskill/hub") || s.path.includes(".xskill/skills")) {
             names.add(s.name);
         }
@@ -183,7 +189,7 @@ export function MarketplacePage() {
       await invoke("install_skill_from_url", {
         repoUrl: skill.githubUrl,
       });
-      refreshSkills(); // Refresh local skills to update "Installed" status
+      refreshSkills(); 
       alert(`✅ "${skill.name}" installed successfully! Go to Hub to view.`);
     } catch (err) {
       alert(`❌ Install failed: ${err}`);
@@ -194,65 +200,72 @@ export function MarketplacePage() {
 
   const itemData = useMemo<CellData>(() => ({
     skills: filteredSkills,
-    columnCount: 1, // Will be overridden by grid render
+    columnCount: 1, 
     installingId,
     onInstall: handleInstall,
     installedSkills: installedSkillNames
   }), [filteredSkills, installingId, installedSkillNames]);
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="mb-6 flex items-center justify-between gap-4 shrink-0">
+    <div className="flex flex-col h-full space-y-6">
+      <div className="mb-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 shrink-0">
         <div>
-          <h2 className="text-2xl font-semibold">Marketplace</h2>
-          <p className="text-muted-foreground text-sm mt-1">
-            Discover open-source skills from the community.
+          <h2 className="text-3xl font-bold tracking-tight">Marketplace</h2>
+          <p className="text-muted-foreground text-sm mt-1.5 font-medium">
+            Discover open-source intelligence from the community.
           </p>
         </div>
-        <div className="flex items-center gap-2 flex-1 justify-end max-w-md">
-            <div className="relative w-full">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+        <div className="flex items-center gap-3 w-full md:max-w-md">
+            <div className="relative w-full group">
+                <Search className="absolute left-3.5 top-3 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
                 <Input 
                     placeholder="Search skills..." 
-                    className="pl-9 bg-background"
+                    className="pl-10 h-10 bg-background/50 border-border/50 rounded-xl shadow-sm focus-visible:ring-primary/20 transition-all"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                 />
             </div>
-            <Button variant="outline" size="icon" onClick={fetchMarketplace} disabled={loading}>
+            <Button variant="outline" size="icon" onClick={fetchMarketplace} disabled={loading} className="h-10 w-10 rounded-xl border-border/50 shadow-sm active:scale-95 transition-transform">
                 <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
             </Button>
         </div>
       </div>
 
       {loading && (
-        <div className="flex items-center justify-center py-20 text-muted-foreground text-sm">
-          <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> Loading marketplace...
+        <div className="flex flex-col items-center justify-center py-32 text-muted-foreground">
+          <RefreshCw className="h-6 w-6 animate-spin mb-4 text-primary" />
+          <p className="text-sm font-medium tracking-wide">Syncing marketplace...</p>
         </div>
       )}
 
       {!loading && error && (
-        <div className="flex items-center gap-2 text-sm text-muted-foreground py-10 justify-center">
-          <AlertCircle className="h-4 w-4 text-destructive" />
-          {error}
+        <div className="flex flex-col items-center justify-center py-20 text-destructive bg-destructive/5 rounded-3xl border border-destructive/20">
+          <AlertCircle className="h-8 w-8 mb-3" />
+          <p className="font-medium">{error}</p>
         </div>
       )}
 
       {!loading && !error && filteredSkills.length === 0 && (
-        <div className="py-16 text-center text-muted-foreground text-sm">
-          <p>No skills found matching your search.</p>
-        </div>
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="py-24 text-center text-muted-foreground/60 border border-dashed border-border/50 rounded-3xl bg-background/30"
+        >
+          <div className="h-16 w-16 mx-auto bg-muted/50 rounded-2xl flex items-center justify-center mb-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]">
+            <CloudDownload className="h-8 w-8 opacity-50" />
+          </div>
+          <p className="text-base font-medium text-foreground/80">No skills found matching search.</p>
+        </motion.div>
       )}
 
       {!loading && !error && filteredSkills.length > 0 && (
-        <div className="flex-1 min-h-0">
+        <div className="flex-1 min-h-0 relative z-0">
             <AutoSizer>
                 {({ height, width }: { height: number; width: number }) => {
                     const columnCount = Math.floor(width / 320) || 1;
                     const columnWidth = width / columnCount;
                     const rowCount = Math.ceil(filteredSkills.length / columnCount);
                     
-                    // Update itemData with correct columnCount for index calculation
                     const currentItemData = { ...itemData, columnCount };
 
                     return (
@@ -264,6 +277,7 @@ export function MarketplacePage() {
                             rowHeight={ROW_HEIGHT}
                             width={width}
                             itemData={currentItemData}
+                            className="overflow-x-hidden"
                         >
                             {SkillCell}
                         </Grid>

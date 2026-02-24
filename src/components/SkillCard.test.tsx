@@ -13,10 +13,14 @@ describe('SkillCard', () => {
     name: 'Test Skill',
     description: 'A test skill description',
     path: '/users/home/.xskill/hub/test-skill',
+    tool_key: 'xskill',
+    disable_model_invocation: false,
+    allowed_tools: [],
+    content: ''
   };
 
   const mockTools: Tool[] = [
-    { key: 'cursor', display_name: 'Cursor', installed: true }
+    { key: 'cursor', display_name: 'Cursor', installed: true, skills_dir: '' }
   ];
 
   it('renders skill information correctly', () => {

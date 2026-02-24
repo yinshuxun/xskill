@@ -14,7 +14,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { AlertCircle, CheckCircle2, Copy, Move, Loader2, GitBranch, FolderSearch, ArrowLeft, Download, Terminal } from "lucide-react";
+import { AlertCircle, CheckCircle2, Copy, Move, Loader2, GitBranch, FolderSearch, ArrowLeft, Download,  } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
 

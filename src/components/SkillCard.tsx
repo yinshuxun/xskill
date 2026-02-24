@@ -7,6 +7,7 @@ import { Wrench, RefreshCw, Link as LinkIcon, ArrowUpCircle, Trash2 } from "luci
 import { Tooltip } from "@/components/ui/tooltip-simple";
 import { AgentIcons } from "@/components/ui/icons";
 import type { LocalSkill, Tool } from "@/hooks/useAppStore";
+import { motion } from "framer-motion";
 
 interface SkillCardProps {
   skill: LocalSkill;
@@ -26,15 +27,12 @@ export function SkillCard({ skill, tools, syncedTools = [], onRefresh, onConfigu
   
   if (skill.path.includes(".xskill/hub") || skill.path.includes(".xskill/skills")) {
     tier = "Hub";
-    tierColor = "bg-emerald-50 text-emerald-700 border-emerald-200";
+    tierColor = "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20";
   } else if (tools.some(t => skill.path.includes(`.${t.key}/`))) {
     tier = "Agent";
-    tierColor = "bg-blue-50 text-blue-700 border-blue-200";
+    tierColor = "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20";
   }
 
-  // Find which tools have this skill installed (by name matching for now, simplistic)
-  // In a real app, we'd check if the skill exists in the tool's dir
-  // For now, let's just use the `tools` prop which contains ALL tools, and filter for installed ones
   const installedTools = tools.filter(t => t.installed);
 
   const handleSync = async (targetKey: string, mode: "copy" | "link") => {
@@ -75,114 +73,120 @@ export function SkillCard({ skill, tools, syncedTools = [], onRefresh, onConfigu
   };
 
   return (
-    <Card className="flex flex-col h-full hover:shadow-md transition-shadow group relative overflow-visible">
-      <CardHeader className="pb-3">
-        <div className="flex justify-between items-start gap-2">
-          <div className="space-y-1">
-            <CardTitle className="text-base font-semibold leading-tight">{skill.name}</CardTitle>
-            <Badge variant="outline" className={`text-[10px] h-5 px-2 font-medium ${tierColor}`}>
-              {tier} Skill
-            </Badge>
-          </div>
-        </div>
-      </CardHeader>
-      
-      <CardContent className="flex-1 pb-2">
-        <CardDescription className="line-clamp-3 text-xs mb-4">
-          {skill.description || "No description provided."}
-        </CardDescription>
-        
-        <div className="text-[10px] text-muted-foreground font-mono bg-muted/50 p-1.5 rounded truncate" title={skill.path}>
-          {skill.path}
-        </div>
-        
-        {syncedTools && syncedTools.length > 0 && (
-          <div className="flex flex-wrap gap-1.5 mt-4">
-            {syncedTools.map(tool => (
-              <Badge key={tool.key} variant="outline" className="text-[10px] h-5 px-2 border-primary/20 bg-primary/5 text-primary font-normal shadow-sm">
-                {tool.display_name}
+    <motion.div
+      whileHover={{ y: -4, scale: 1.01 }}
+      transition={{ type: "spring", stiffness: 400, damping: 30 }}
+      className="h-full"
+    >
+      <Card className="flex flex-col h-full bg-card shadow-[0_20px_40px_-15px_rgba(0,0,0,0.05)] hover:shadow-[0_30px_60px_-15px_rgba(0,0,0,0.08)] transition-shadow duration-300 group relative overflow-visible rounded-3xl border-border/50">
+        <CardHeader className="pb-3 px-6 pt-6">
+          <div className="flex justify-between items-start gap-2">
+            <div className="space-y-1.5">
+              <CardTitle className="text-lg font-semibold tracking-tight text-foreground/90">{skill.name}</CardTitle>
+              <Badge variant="outline" className={`text-[10px] h-5 px-2 font-medium tracking-wide rounded-full ${tierColor}`}>
+                {tier} Skill
               </Badge>
-            ))}
+            </div>
           </div>
-        )}
-      </CardContent>
-
-      <CardFooter className="mt-4 pt-4 pb-4 border-t border-border/40 flex justify-between items-center bg-muted/20">
-        <div className="flex gap-1">
-          <Tooltip content="Configure Skill">
-            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors" onClick={() => onConfigure(skill)}>
-              <Wrench className="h-4 w-4" />
-            </Button>
-          </Tooltip>
+        </CardHeader>
+        
+        <CardContent className="flex-1 px-6 pb-2">
+          <CardDescription className="line-clamp-3 text-sm leading-relaxed mb-5 text-muted-foreground/80">
+            {skill.description || "No description provided."}
+          </CardDescription>
           
-          {tier !== "Hub" && (
-            <Tooltip content="Collect to Hub">
-              <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-purple-500 hover:bg-purple-500/10 transition-colors" onClick={handleCollect}>
-                <ArrowUpCircle className="h-4 w-4" />
-              </Button>
-            </Tooltip>
+          <div className="text-[10px] text-muted-foreground/60 font-mono bg-muted/40 p-2 rounded-xl truncate border border-border/30" title={skill.path}>
+            {skill.path}
+          </div>
+          
+          {syncedTools && syncedTools.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mt-5">
+              {syncedTools.map(tool => (
+                <Badge key={tool.key} variant="outline" className="text-[10px] h-5 px-2.5 rounded-full border-primary/20 bg-primary/5 text-primary font-medium shadow-sm">
+                  {tool.display_name}
+                </Badge>
+              ))}
+            </div>
           )}
-        </div>
+        </CardContent>
 
-        <div className="flex items-center gap-2">
-          <div className="relative">
-            <Tooltip content="Sync to other agents">
-              <Button 
-                variant="secondary" 
-                size="sm" 
-                className="h-8 text-xs font-medium bg-background border border-border/50 text-foreground hover:text-primary hover:border-primary/30 hover:bg-primary/5 shadow-sm transition-all"
-                onClick={() => setShowSyncMenu(!showSyncMenu)}
-              >
-                <RefreshCw className="mr-1.5 h-3 w-3" /> Sync
+        <CardFooter className="mt-5 px-6 py-4 border-t border-border/30 flex justify-between items-center bg-muted/5 rounded-b-3xl">
+          <div className="flex gap-1">
+            <Tooltip content="Configure Skill">
+              <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors" onClick={() => onConfigure(skill)}>
+                <Wrench className="h-4 w-4" />
               </Button>
             </Tooltip>
             
-            {showSyncMenu && installedTools.length > 0 && (
-              <div className="absolute right-0 bottom-full mb-2 z-50 bg-popover border border-border rounded-lg shadow-xl w-[340px] overflow-hidden animate-in fade-in slide-in-from-bottom-2">
-                <div className="px-4 py-3 border-b bg-muted/30 flex items-center justify-between">
-                  <span className="text-xs font-semibold text-foreground/80">Sync to Agent</span>
-                  <Badge variant="secondary" className="text-[10px] h-5 font-normal text-muted-foreground">
-                    {installedTools.length} Active
-                  </Badge>
-                </div>
-                <div className="p-2 grid grid-cols-1 gap-1 max-h-[320px] overflow-y-auto">
-                  {installedTools.map((t) => {
-                    const Icon = AgentIcons[t.key] || AgentIcons.cursor;
-                    return (
-                      <div key={t.key} className="flex items-center justify-between px-3 py-2 hover:bg-accent rounded-md group/item transition-all border border-transparent hover:border-border/50">
-                        <div className="flex items-center gap-3 min-w-0">
-                          <div className="h-8 w-8 rounded-md bg-background border border-border/50 flex items-center justify-center shrink-0 shadow-sm group-hover/item:border-primary/20 group-hover/item:shadow-md transition-all">
-                            <Icon className="h-4 w-4 text-muted-foreground group-hover/item:text-primary transition-colors" />
-                          </div>
-                          <span className="text-sm text-foreground/90 truncate font-medium" title={t.display_name}>{t.display_name}</span>
-                        </div>
-                        <div className="flex gap-1 opacity-80 group-hover/item:opacity-100 transition-opacity shrink-0">
-                          <Tooltip content="Copy Skill (Standard)" side="left">
-                            <Button size="icon" variant="ghost" className="h-8 w-8 hover:bg-primary/10 hover:text-primary" disabled={syncing === `${t.key}-copy`} onClick={() => handleSync(t.key, "copy")}>
-                              <RefreshCw className={`h-3.5 w-3.5 ${syncing === `${t.key}-copy` ? "animate-spin" : ""}`} />
-                            </Button>
-                          </Tooltip>
-                          <Tooltip content="Link Skill (Live Update)" side="left">
-                            <Button size="icon" variant="ghost" className="h-8 w-8 hover:bg-blue-500/10 hover:text-blue-600" disabled={syncing === `${t.key}-link`} onClick={() => handleSync(t.key, "link")}>
-                              <LinkIcon className="h-3.5 w-3.5" />
-                            </Button>
-                          </Tooltip>
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
+            {tier !== "Hub" && (
+              <Tooltip content="Collect to Hub">
+                <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl text-muted-foreground hover:text-purple-500 hover:bg-purple-500/10 transition-colors" onClick={handleCollect}>
+                  <ArrowUpCircle className="h-4 w-4" />
+                </Button>
+              </Tooltip>
             )}
           </div>
-          
-          <Tooltip content="Delete Skill">
-            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors" onClick={handleDelete}>
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          </Tooltip>
-        </div>
-      </CardFooter>
-    </Card>
+
+          <div className="flex items-center gap-2">
+            <div className="relative">
+              <Tooltip content="Sync to other agents">
+                <Button 
+                  variant="secondary" 
+                  size="sm" 
+                  className="h-9 px-3 rounded-xl text-xs font-medium bg-background border border-border/50 text-foreground hover:text-primary hover:border-primary/30 hover:bg-primary/5 shadow-sm transition-all active:scale-[0.97]"
+                  onClick={() => setShowSyncMenu(!showSyncMenu)}
+                >
+                  <RefreshCw className="mr-2 h-3.5 w-3.5" /> Sync
+                </Button>
+              </Tooltip>
+              
+              {showSyncMenu && installedTools.length > 0 && (
+                <div className="absolute right-0 bottom-full mb-3 z-50 bg-popover/95 backdrop-blur-xl border border-border/50 rounded-2xl shadow-[0_20px_40px_-15px_rgba(0,0,0,0.1)] w-[340px] overflow-hidden animate-in fade-in slide-in-from-bottom-2">
+                  <div className="px-5 py-3.5 border-b border-border/30 bg-muted/20 flex items-center justify-between">
+                    <span className="text-xs font-semibold text-foreground/80 uppercase tracking-wider">Sync to Agent</span>
+                    <Badge variant="secondary" className="text-[10px] h-5 rounded-full font-medium text-muted-foreground bg-background">
+                      {installedTools.length} Active
+                    </Badge>
+                  </div>
+                  <div className="p-2 grid grid-cols-1 gap-1 max-h-[320px] overflow-y-auto">
+                    {installedTools.map((t) => {
+                      const Icon = AgentIcons[t.key] || AgentIcons.cursor;
+                      return (
+                        <div key={t.key} className="flex items-center justify-between px-3 py-2.5 hover:bg-accent/50 rounded-xl group/item transition-all border border-transparent hover:border-border/30">
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className="h-9 w-9 rounded-lg bg-background border border-border/50 flex items-center justify-center shrink-0 shadow-sm group-hover/item:border-primary/20 group-hover/item:shadow-md transition-all">
+                              <Icon className="h-4.5 w-4.5 text-muted-foreground group-hover/item:text-primary transition-colors" />
+                            </div>
+                            <span className="text-sm text-foreground/90 truncate font-medium tracking-tight" title={t.display_name}>{t.display_name}</span>
+                          </div>
+                          <div className="flex gap-1 opacity-60 group-hover/item:opacity-100 transition-opacity shrink-0">
+                            <Tooltip content="Copy Skill (Standard)" side="left">
+                              <Button size="icon" variant="ghost" className="h-8 w-8 rounded-lg hover:bg-primary/10 hover:text-primary active:scale-95" disabled={syncing === `${t.key}-copy`} onClick={() => handleSync(t.key, "copy")}>
+                                <RefreshCw className={`h-3.5 w-3.5 ${syncing === `${t.key}-copy` ? "animate-spin" : ""}`} />
+                              </Button>
+                            </Tooltip>
+                            <Tooltip content="Link Skill (Live Update)" side="left">
+                              <Button size="icon" variant="ghost" className="h-8 w-8 rounded-lg hover:bg-blue-500/10 hover:text-blue-600 active:scale-95" disabled={syncing === `${t.key}-link`} onClick={() => handleSync(t.key, "link")}>
+                                <LinkIcon className="h-3.5 w-3.5" />
+                              </Button>
+                            </Tooltip>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+            
+            <Tooltip content="Delete Skill">
+              <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors" onClick={handleDelete}>
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </Tooltip>
+          </div>
+        </CardFooter>
+      </Card>
+    </motion.div>
   );
 }
