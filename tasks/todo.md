@@ -73,9 +73,9 @@
 - [ ] **真数据持久化**: 将目前前端的 Dummy Data 替换为通过 `tauri-plugin-store` (或 SQLite) 读写的真实本地状态。
 
 ### 4.2 GitHub Actions CI/CD
-- [ ] **自动化测试流**: 配置 `.github/workflows`，代码推送到 main 时自动进行 Lint、TS Check 和 Rust `cargo check`。
-- [ ] **自动化打包 Mac 版本**: 配置 Tag Release 流水线，调用 `tauri build`，自动生成跨平台芯片支持的 `.dmg` 安装包。
-- [ ] **自动化 Release 发布**: 生成 DMG 后自动上传为 GitHub Release 附件供用户直接下载。
+- [x] **自动化测试流**: 配置 `.github/workflows`，代码推送到 main 时自动进行 Lint、TS Check 和 Rust `cargo check`。
+- [x] **自动化打包 Mac 版本**: 配置 Tag Release 流水线，调用 `tauri build`，自动生成跨平台芯片支持的 `.dmg` 安装包。
+- [x] **自动化 Release 发布**: 生成 DMG 后自动上传为 GitHub Release 附件供用户直接下载。
 
 ### 4.3 文档完善
 - [ ] **新手入门安利指南**: 基于现有思路，输出一篇针对 Vibe Coding 和 MCP 概念的白皮书/软文。

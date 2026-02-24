@@ -69,7 +69,7 @@ fn parse_skill_md(raw: &str, fallback_name: &str) -> (String, String, bool, Vec<
     let mut description = String::new();
     let mut disable_model_invocation = false;
     let mut allowed_tools: Vec<String> = Vec::new();
-    let mut content = String::new();
+    let content;
     let trimmed = raw.trim();
     if let Some(after_open) = trimmed.strip_prefix("---") {
         if let Some(close_pos) = after_open.find("\n---") {
