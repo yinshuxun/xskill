@@ -1,5 +1,6 @@
 pub mod commands;
 pub mod config;
+pub mod config_manager;
 pub mod crawler;
 pub mod feed_parser;
 pub mod git_manager;
@@ -9,6 +10,8 @@ pub mod skill_manager;
 pub mod store;
 pub mod fingerprint;
 pub mod onboarding;
+pub mod scanner;
+pub mod github;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -31,6 +34,10 @@ pub fn run() {
             store::save_feeds,
             onboarding::scan_external_skills,
             onboarding::import_skills,
+            config_manager::get_skill_config,
+            config_manager::save_skill_config,
+            scanner::scan_workspace,
+            github::fetch_github_file,
         ])
         .setup(|_app| {
             config::init_config();

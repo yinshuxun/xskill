@@ -1,3 +1,5 @@
+use crate::config_manager::get_skill_config;
+use serde_json::Value;
 use std::fs;
 use std::path::PathBuf;
 use walkdir::WalkDir;
@@ -52,6 +54,48 @@ fn copy_dir_all(src: &PathBuf, dst: &PathBuf) -> Result<(), String> {
     Ok(())
 }
 
+fn update_claude_desktop_config(skill_name: &str, _dest_path: &PathBuf) -> Result<(), String> {
+    // Only works on macOS for now
+    let home = dirs::home_dir().ok_or("Could not find home dir")?;
+    let config_path = home.join("Library/Application Support/Claude/claude_desktop_config.json");
+    
+    if !config_path.exists() {
+        if let Some(parent) = config_path.parent() {
+            fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+        }
+        fs::write(&config_path, "{}").map_err(|e| e.to_string())?;
+    }
+
+    let content = fs::read_to_string(&config_path).map_err(|e| e.to_string())?;
+    let mut json: Value = serde_json::from_str(&content).unwrap_or(serde_json::json!({}));
+
+    // Get skill config
+    let skill_config = get_skill_config(skill_name.to_string())?;
+    
+    // Only update if we have a command configured
+    if let Some(cmd) = skill_config.command {
+        let args = skill_config.args.unwrap_or_default();
+        let env = skill_config.env.unwrap_or_default();
+
+        if json.get("mcpServers").is_none() {
+             json["mcpServers"] = serde_json::json!({});
+        }
+        
+        if let Some(mcp_servers) = json.get_mut("mcpServers").and_then(|v| v.as_object_mut()) {
+             mcp_servers.insert(skill_name.to_string(), serde_json::json!({
+                 "command": cmd,
+                 "args": args,
+                 "env": env
+             }));
+        }
+
+        let new_content = serde_json::to_string_pretty(&json).map_err(|e| e.to_string())?;
+        fs::write(&config_path, new_content).map_err(|e| e.to_string())?;
+    }
+
+    Ok(())
+}
+
 #[tauri::command]
 pub fn sync_skill(
     skill_dir: String,
@@ -76,7 +120,15 @@ pub fn sync_skill(
             Some(skills_dir) => {
                 let dest = skills_dir.join(&skill_name);
                 match copy_dir_all(&src, &dest) {
-                    Ok(_) => written_paths.push(dest.to_string_lossy().to_string()),
+                    Ok(_) => {
+                        written_paths.push(dest.to_string_lossy().to_string());
+                        // Try to inject config for known tools
+                        if tool_key == "claude_code" || tool_key == "claude_desktop" {
+                             if let Err(e) = update_claude_desktop_config(&skill_name, &dest) {
+                                 errors.push(format!("Claude Config Error: {}", e));
+                             }
+                        }
+                    },
                     Err(e) => errors.push(format!("{}: {}", tool_key, e)),
                 }
             }

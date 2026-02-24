@@ -36,11 +36,21 @@ const DEFAULT_FEEDS: FeedEntry[] = [
   },
 ];
 
+export interface Project {
+  path: string;
+  name: string;
+  has_git: boolean;
+  has_mcp: boolean;
+  has_agents_md: boolean;
+}
+
 export function useAppStore() {
   const [skills, setSkills] = useState<LocalSkill[]>([]);
   const [tools, setTools] = useState<Tool[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
   const [feeds, setFeedsState] = useState<FeedEntry[]>(DEFAULT_FEEDS);
   const [loadingSkills, setLoadingSkills] = useState(true);
+  const [loadingProjects, setLoadingProjects] = useState(false);
 
   const loadSkills = useCallback(async () => {
     setLoadingSkills(true);
@@ -51,6 +61,19 @@ export function useAppStore() {
       setSkills([]);
     } finally {
       setLoadingSkills(false);
+    }
+  }, []);
+
+  const scanProjects = useCallback(async (extraRoots?: string[]) => {
+    setLoadingProjects(true);
+    try {
+      const result = await invoke<Project[]>("scan_workspace", { extraRoots });
+      setProjects(result);
+    } catch (e) {
+      console.error(e);
+      setProjects([]);
+    } finally {
+      setLoadingProjects(false);
     }
   }, []);
 
@@ -74,7 +97,7 @@ export function useAppStore() {
           setFeedsState(savedFeeds);
         }
       } catch {
-
+        // ignore
       }
     })();
 
@@ -97,9 +120,19 @@ export function useAppStore() {
       await store.set(KEY_FEEDS, updated);
       await store.save();
     } catch {
-
+      // ignore
     }
   }, []);
 
-  return { skills, tools, feeds, loadingSkills, persistFeeds, refreshSkills };
+  return { 
+    skills, 
+    tools, 
+    feeds, 
+    loadingSkills, 
+    projects, 
+    loadingProjects, 
+    persistFeeds, 
+    refreshSkills, 
+    scanProjects 
+  };
 }

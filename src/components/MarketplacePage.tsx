@@ -23,11 +23,14 @@ interface MarketplacePageProps {
   feeds: FeedEntry[];
 }
 
+import { Input } from "@/components/ui/input";
+
 export function MarketplacePage({ feeds }: MarketplacePageProps) {
   const [skills, setSkills] = useState<RemoteSkill[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [installingId, setInstallingId] = useState<string | null>(null);
+  const [directUrl, setDirectUrl] = useState("");
 
   const fetchAllFeeds = async () => {
     setLoading(true);
@@ -43,7 +46,7 @@ export function MarketplacePage({ feeds }: MarketplacePageProps) {
           results.push(...data.skills);
         }
       } catch {
-
+        // ignore
       }
     }
 
@@ -77,6 +80,34 @@ export function MarketplacePage({ feeds }: MarketplacePageProps) {
     }
   };
 
+  const handleDirectInstall = async () => {
+    if (!directUrl) return;
+    
+    const match = directUrl.match(/github\.com\/([^/]+)\/([^/]+)/);
+    if (!match) {
+      alert("Invalid GitHub URL. Must be like https://github.com/owner/repo");
+      return;
+    }
+    const repoName = match[2].replace(".git", "");
+    
+    const targetDir = await open({ directory: true, multiple: false, title: "Choose install directory" });
+    if (!targetDir) return;
+
+    setInstallingId(directUrl);
+    try {
+      await invoke("clone_skill", {
+        repoUrl: directUrl,
+        targetDir: `${targetDir}/${repoName}`,
+      });
+      alert(`✅ "${repoName}" installed successfully!`);
+      setDirectUrl("");
+    } catch (err) {
+      alert(`❌ Install failed: ${err}`);
+    } finally {
+      setInstallingId(null);
+    }
+  };
+
   return (
     <div>
       <div className="mb-6 flex items-start justify-between">
@@ -91,6 +122,23 @@ export function MarketplacePage({ feeds }: MarketplacePageProps) {
           Refresh
         </Button>
       </div>
+
+      <Card className="mb-8 p-4 bg-muted/30">
+        <h3 className="text-sm font-medium mb-2 flex items-center gap-2">
+          <CloudDownload className="h-4 w-4" /> Install from GitHub
+        </h3>
+        <div className="flex gap-2">
+          <Input 
+            placeholder="https://github.com/owner/repo" 
+            value={directUrl} 
+            onChange={(e) => setDirectUrl(e.target.value)} 
+            className="bg-background"
+          />
+          <Button onClick={handleDirectInstall} disabled={!directUrl || !!installingId}>
+            {installingId === directUrl ? <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> : "Install"}
+          </Button>
+        </div>
+      </Card>
 
       {loading && (
         <div className="flex items-center justify-center py-20 text-muted-foreground text-sm">

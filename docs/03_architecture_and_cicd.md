@@ -8,7 +8,7 @@
 - **前端框架**: React 18 + TypeScript + Vite
 - **UI 组件库**: Tailwind CSS + shadcn/ui (提供极简、现代的 Mac 风格 UI)
 - **本地存储**: Tauri 官方插件 `tauri-plugin-store` (基于 JSON) 或 `tauri-plugin-sql` (SQLite)
-- **爬虫模块**: Rust 后端实现异步 HTTP 请求 (reqwest) 和 HTML 解析 (scraper)，保证抓取效率。
+- **网络层**: Rust 后端实现异步 HTTP 请求 (reqwest) 和 GitHub API 客户端。
 - **AI 模块**: 前端通过 HTTP 调用本地 Ollama 接口或云端大模型 API。
 
 ---
@@ -20,20 +20,20 @@ skill-hub-mac/
 ├── src-tauri/               # Rust 后端代码 (Tauri)
 │   ├── src/
 │   │   ├── main.rs          # 入口文件
-│   │   ├── commands.rs      # 前后端通信接口 (IDE同步、文件读写)
-│   │   ├── crawler.rs       # 市场爬虫逻辑
-│   │   ├── feed_parser.rs   # 内部订阅源解析逻辑
+│   │   ├── commands.rs      # 前后端通信接口
+│   │   ├── scanner.rs       # 工作区扫描引擎 (New)
+│   │   ├── github.rs        # GitHub API 客户端 (New)
 │   │   ├── git_manager.rs   # Git 仓库克隆与更新逻辑
-│   │   ├── onboarding.rs    # 技能扫描与导入逻辑 (New)
-│   │   ├── fingerprint.rs   # 技能目录指纹识别逻辑 (New)
-│   │   └── config.rs        # 本地配置管理
+│   │   ├── config_manager.rs # 技能配置管理
+│   │   ├── ide_sync.rs      # IDE 同步逻辑
+│   │   └── lib.rs           # 库入口
 │   ├── tauri.conf.json      # Tauri 配置文件
 │   └── Cargo.toml           # Rust 依赖管理
 ├── src/                     # 前端代码 (React)
 │   ├── components/          # UI 组件 (shadcn/ui)
-│   ├── pages/               # 页面视图 (列表页、市场页、设置页)
+│   ├── pages/               # 页面视图
 │   ├── hooks/               # 自定义 Hooks
-│   ├── lib/                 # 工具函数 (API 调用、状态管理)
+│   ├── lib/                 # 工具函数
 │   ├── App.tsx              # 前端入口
 │   └── main.tsx
 ├── package.json             # Node 依赖管理
@@ -46,31 +46,35 @@ skill-hub-mac/
 ## 3. 核心模块技术方案
 
 ### 3.1 IDE 配置文件同步与中心化管理
-- **中心化存储**：Skill Hub 使用 `~/.xskill/skills` 作为 Skills 的权威存储中心。
-- **原理**：Cursor、Claude Desktop 等工具的 MCP 配置通常存储在特定的本地路径（如 `~/Library/Application Support/Cursor/User/globalStorage/.../mcp.json`）。
-- **实现**：Rust 后端提供 `sync_to_ide` 命令，读取目标 JSON 文件，将 Skill Hub 中心仓库中启用的技能路径（Absolute Path）注入到对应 IDE 的配置中。
+- **中心化存储**：Skill Hub 使用 `~/.xskill/skills` 作为 Skills 的默认存储中心。
+- **配置注入**：Rust 后端提供 `sync_to_ide` 命令，读取目标 JSON 文件，将 Skill Hub 中启用的技能配置（Command, Args, Env）精准注入到对应 IDE 的配置中。
 
-### 3.2 智能接管 (Onboarding)
-- **原理**：扫描常见工具目录，通过计算目录哈希 (Fingerprint) 识别已存在的 Skills，去重并提供导入向导。
+### 3.2 工作区扫描与智能发现 (Workspace Scanner)
+- **原理**：不再局限于单一的存储目录，而是主动扫描用户的代码工作区（如 `~/workspace`）。
 - **实现**：
-  - `onboarding.rs`: 遍历 `~/.cursor`, `~/.claude` 等目录，提取可能的 Skill 路径。
-  - `fingerprint.rs`: 使用 SHA256 对 Skill 目录内容（忽略 .git, node_modules）计算哈希值，与中心仓库比对。
+  - `scanner.rs`: 使用 `walkdir` 递归扫描配置的根目录。
+  - **项目识别**：通过 `.git` 目录识别项目根路径。
+  - **技能识别**：检测项目中是否包含 `mcp.json`、`package.json` (含 mcp 关键词) 或 `AGENTS.md`。
+- **价值**：实现“零配置”接入，用户现有的项目即是技能库。
 
-### 3.3 市场爬虫
-- **原理**：定期请求目标网站（如 skillsmp.com 的 API 或 HTML），解析出 Skill 的 GitHub 仓库地址、描述和安装命令。
-- **实现**：使用 Rust 的 `reqwest` 库发起请求，数据缓存在本地 SQLite 中，前端通过分页读取。
+### 3.3 远程仓库集成 (Remote Fetcher)
+- **原理**：直接与 GitHub API 交互，获取最新的 Skills 和 Rules，不依赖中间服务器。
+- **实现**：
+  - `github.rs`: 使用 `reqwest` 实现 GitHub API 客户端。
+  - **智能解析**：支持解析 `github.com` 和 `raw.githubusercontent.com` 链接，自动处理分支和路径。
+  - **内容获取**：直接拉取 `AGENTS.md` 或 `mcp.json` 内容。
 
 ### 3.4 技能配置与安全存储 (Skill Configuration)
 - **原理**：MCP Server 的配置是一个复杂的 JSON 对象，包含 `command`, `args`, `env` 等字段。
 - **实现**：
   - `config_manager.rs`: 负责加载和保存每个 Skill 的用户自定义配置。
-  - **动态表单**：前端根据 Skill 元数据生成配置表单（例如 `args` 需要文件路径选择器，`env` 需要密码框）。
-  - **安全存储**：对于 API Keys 等敏感数据，使用 `tauri-plugin-store` 的加密存储或 Mac Keychain，绝不以明文形式保存到 Git 或普通文本文件中。
-  - **配置注入**：在 `sync_to_ide` 阶段，将解密后的完整配置对象（包含 Args 和 Env）注入到 IDE 的 JSON 配置文件中。
-- **原理**：通过读取公司内部 Git 仓库托管的 `registry.json` 文件，实现去中心化的内部技能分发。
-- **实现**：
-  - `feed_parser.rs`：负责定时拉取和解析用户配置的多个订阅源 URL，将数据合并后提供给前端展示。
-  - `git_manager.rs`：当用户点击安装内部 Skill 时，在后台静默执行 `git clone` 将仓库拉取到本地，并在更新时执行 `git pull`。
+  - **动态表单**：前端根据 Skill 元数据生成配置表单。
+  - **安全存储**：敏感数据加密存储。
+
+### 3.5 技能套件 (Suites/Kits)
+- **概念**：将一组 Skills (工具) 和 Rules (规范/AGENTS.md) 打包成一个“套件”。
+- **工作流**：用户选择一个项目，点击“应用套件”，系统自动配置好所有工具并写入规范文件，实现一键环境就绪。
+
 ---
 
 ## 4. 自动化构建与发布 (CI/CD Pipeline)
@@ -88,37 +92,3 @@ skill-hub-mac/
 3. **前端构建**：执行 `npm run build` 编译 React 代码。
 4. **Tauri 构建**：执行 `npm run tauri build`，Rust 编译器将打包生成 `.app` 和 `.dmg` 文件。
 5. **自动发布 (Release)**：使用 `softprops/action-gh-release` 插件，自动在 GitHub 仓库创建一个新的 Release，并将生成的 `.dmg` 文件作为附件上传。
-
-### 4.2 示例 Workflow (预览)
-*(具体 YAML 将在开发阶段写入 `.github/workflows/release.yml`)*
-
-```yaml
-name: Release Mac App
-on:
-  push:
-    tags:
-      - 'v*'
-jobs:
-  build-and-release:
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
-      - name: Install frontend dependencies
-        run: npm install
-      - name: Build Tauri App
-        uses: tauri-apps/tauri-action@v0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tagName: ${{ github.ref_name }}
-          releaseName: 'Skill Hub ${{ github.ref_name }}'
-          releaseBody: 'See the assets to download the latest version.'
-          releaseDraft: false
-          prerelease: false
-```
