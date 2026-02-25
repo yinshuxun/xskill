@@ -108,6 +108,7 @@ This document tracks the development progress of XSkill.
 ## Phase 5: v0.4.0 Intelligence & Automation (Future)
 - [ ] **AI Search**: "Find me a skill to handle PDF files" -> recommends from Marketplace.
 - [ ] **System Tray**: Quick access from menu bar.
+- [ ] **XSkill website**: Quick View In a vercel page, support view xskill & download xskill.dmg
 - [ ] **E2E Verification & Health**:
     - [ ] **Health Check View**: Dashboard for agent installation status and path validity.
     - [ ] **Verify Command**: Automated check if a skill is correctly installed and accessible by the agent.

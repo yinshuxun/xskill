@@ -1,5 +1,5 @@
 import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SkillCard } from './SkillCard';
 import { LocalSkill, Tool } from '@/hooks/useAppStore';
 
@@ -22,6 +22,15 @@ describe('SkillCard', () => {
   const mockTools: Tool[] = [
     { key: 'cursor', display_name: 'Cursor', installed: true, skills_dir: '' }
   ];
+
+  beforeEach(() => {
+    // Mock clipboard API for jsdom environment
+    vi.stubGlobal('navigator', {
+      clipboard: {
+        writeText: vi.fn()
+      }
+    });
+  });
 
   it('renders skill information correctly', () => {
     render(
@@ -49,10 +58,12 @@ describe('SkillCard', () => {
       />
     );
 
-    // Assuming the Wrench icon button is the configure button
+    // Find the Configure button (Wrench icon) - it's the third button in the card
     const buttons = screen.getAllByRole('button');
-    // First button is Wrench based on UI layout
-    fireEvent.click(buttons[0]);
+    // Button order: Copy Path, Open Folder, Configure, Collect, Sync... 
+    // Configure is at index 2 (0-based)
+    const configureButton = buttons[2];
+    fireEvent.click(configureButton);
     expect(onConfigureMock).toHaveBeenCalledWith(mockSkill);
   });
 });
