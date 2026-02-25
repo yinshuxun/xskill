@@ -1,5 +1,5 @@
 use crate::suite_manager::Suite;
-use crate::skill_manager::CENTRAL_SKILLS_DIR;
+use crate::skill_manager::{CENTRAL_SKILLS_DIR, tool_definitions};
 use std::fs;
 use std::path::PathBuf;
 use walkdir::WalkDir;
@@ -32,7 +32,7 @@ fn copy_dir_all(src: &PathBuf, dst: &PathBuf) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub fn apply_suite(project_path: String, suite: Suite) -> Result<(), String> {
+pub fn apply_suite(project_path: String, suite: Suite, agent: Option<String>) -> Result<(), String> {
     let proj_dir = PathBuf::from(&project_path);
     if !proj_dir.exists() || !proj_dir.is_dir() {
         return Err(format!("Invalid project directory: {}", project_path));
@@ -45,12 +45,21 @@ pub fn apply_suite(project_path: String, suite: Suite) -> Result<(), String> {
             .map_err(|e| format!("Failed to write AGENTS.md: {}", e))?;
     }
 
-    // Sync skills to .cursor/skills or .agent/skills (we will default to .cursor/skills for now as it's common)
+    // Sync skills to agent-specific skills directory
     if !suite.loadout_skills.is_empty() {
-        let target_skills_dir = proj_dir.join(".cursor").join("skills");
+        let agent_key = agent.unwrap_or_else(|| "cursor".to_string());
+        
+        let defs = tool_definitions();
+        let target_subdir = defs.iter()
+            .find(|d| d.key == agent_key)
+            .map(|d| d.skills_subdir)
+            .unwrap_or(".cursor/skills"); // Default fallback
+
+        let target_skills_dir = proj_dir.join(target_subdir);
+        
         if !target_skills_dir.exists() {
             fs::create_dir_all(&target_skills_dir)
-                .map_err(|e| format!("Failed to create .cursor/skills directory: {}", e))?;
+                .map_err(|e| format!("Failed to create skills directory {}: {}", target_skills_dir.display(), e))?;
         }
 
         let home = crate::utils::get_home_dir().ok_or("Could not find home directory")?;

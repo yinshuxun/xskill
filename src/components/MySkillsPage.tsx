@@ -61,8 +61,8 @@ export function MySkillsPage({ skills, loading, onRefresh, tools, onConfigure }:
   const uniqueAgentSkills = Array.from(skillGroups.values());
 
   return (
-    <>
-      <div className="mb-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+    <div className="min-h-full pb-10">
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 sticky top-0 z-50 bg-zinc-50/95 dark:bg-zinc-950/95 backdrop-blur-md px-10 py-6 border-b border-border/5 shadow-sm mb-6">
         <div>
           <h2 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">Installed Skills</h2>
           <p className="text-muted-foreground text-sm mt-1.5 font-medium">
@@ -85,6 +85,7 @@ export function MySkillsPage({ skills, loading, onRefresh, tools, onConfigure }:
         </div>
       </div>
 
+      <div className="px-10">
       {loading && (
         <div className="flex flex-col items-center justify-center py-32 text-muted-foreground">
           <RefreshCw className="h-6 w-6 animate-spin mb-4 text-primary" />
@@ -126,6 +127,7 @@ export function MySkillsPage({ skills, loading, onRefresh, tools, onConfigure }:
           ))}
         </AnimatePresence>
       </motion.div>
-    </>
+      </div>
+    </div>
   );
 }

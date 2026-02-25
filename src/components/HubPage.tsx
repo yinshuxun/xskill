@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { RefreshCw, LayoutGrid, Search } from "lucide-react";
+import { Plus, ScanSearch, RefreshCw, LayoutGrid, Search } from "lucide-react";
 import { SkillCard } from "@/components/SkillCard";
 import type { LocalSkill, Tool } from "@/hooks/useAppStore";
 import { motion, AnimatePresence } from "framer-motion";
@@ -12,6 +12,8 @@ interface HubPageProps {
   onRefresh: () => void;
   tools: Tool[];
   onConfigure: (skill: LocalSkill) => void;
+  onImport: () => void;
+  onNewSkill: () => void;
 }
 
 const containerVariants = {
@@ -29,7 +31,7 @@ const itemVariants = {
   show: { opacity: 1, y: 0, transition: { type: "spring" as const, stiffness: 300, damping: 24 } }
 };
 
-export function HubPage({ skills, loading, onRefresh, tools, onConfigure }: HubPageProps) {
+export function HubPage({ skills, loading, onRefresh, tools, onConfigure, onImport, onNewSkill }: HubPageProps) {
   const [searchQuery, setSearchQuery] = useState("");
 
   const hubSkills = skills.filter(
@@ -41,16 +43,16 @@ export function HubPage({ skills, loading, onRefresh, tools, onConfigure }: HubP
   const installedTools = tools.filter((t) => t.installed);
 
   return (
-    <>
-      <div className="mb-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+    <div className="min-h-full pb-10">
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 sticky top-0 z-50 bg-zinc-50/95 dark:bg-zinc-950/95 backdrop-blur-md px-10 py-6 border-b border-border/5 shadow-sm mb-6">
         <div>
           <h2 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">Central Hub</h2>
           <p className="text-muted-foreground text-sm mt-1.5 font-medium">
             Manage all your agent skills in the master repository.
           </p>
         </div>
-        <div className="flex items-center gap-3 w-full md:max-w-md">
-            <div className="relative w-full group">
+        <div className="flex items-center gap-3 w-full md:max-w-xl justify-end">
+            <div className="relative w-full max-w-[240px] group">
                 <Search className="absolute left-3.5 top-3 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
                 <Input 
                     placeholder="Search skills..." 
@@ -59,12 +61,20 @@ export function HubPage({ skills, loading, onRefresh, tools, onConfigure }: HubP
                     onChange={(e) => setSearchQuery(e.target.value)}
                 />
             </div>
-            <Button variant="outline" size="icon" onClick={onRefresh} disabled={loading} className="h-10 w-10 rounded-xl border-border/50 shadow-sm active:scale-95 transition-transform">
+            <Button variant="outline" size="icon" onClick={onRefresh} disabled={loading} className="h-10 w-10 shrink-0 rounded-xl border-border/50 shadow-sm active:scale-95 transition-transform">
                 <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+            </Button>
+            <div className="h-8 w-px bg-border/50 mx-1" />
+            <Button variant="outline" onClick={onImport} className="h-10 rounded-xl shadow-sm hover:shadow transition-all border-border/50 bg-background font-medium whitespace-nowrap">
+              <ScanSearch className="mr-2 h-4 w-4 opacity-70" /> Import
+            </Button>
+            <Button onClick={onNewSkill} className="h-10 rounded-xl shadow-md bg-primary hover:bg-primary/90 text-primary-foreground font-medium transition-transform active:scale-[0.98] whitespace-nowrap">
+              <Plus className="mr-2 h-4 w-4" /> New Skill
             </Button>
         </div>
       </div>
 
+      <div className="px-10">
       {loading && (
         <div className="flex flex-col items-center justify-center py-32 text-muted-foreground">
           <RefreshCw className="h-6 w-6 animate-spin mb-4 text-primary" />
@@ -108,6 +118,7 @@ export function HubPage({ skills, loading, onRefresh, tools, onConfigure }: HubP
           ))}
         </AnimatePresence>
       </motion.div>
-    </>
+      </div>
+    </div>
   );
 }

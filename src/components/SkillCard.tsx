@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { Card, CardHeader, CardTitle, CardDescription, CardFooter, CardContent } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Wrench, RefreshCw, Link as LinkIcon, ArrowUpCircle, Trash2, Check, Copy, FolderOpen } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Wrench, RefreshCw, Link as LinkIcon, ArrowUpCircle, Trash2, Check, Copy, FolderOpen, Eye, FileText } from "lucide-react";
 import { Tooltip } from "@/components/ui/tooltip-simple";
 import { AgentIcons } from "@/components/ui/icons";
 import type { LocalSkill, Tool } from "@/hooks/useAppStore";
@@ -21,6 +23,7 @@ export function SkillCard({ skill, tools, syncedTools = [], onRefresh, onConfigu
   const [syncing, setSyncing] = useState<string | null>(null);
   const [showSyncMenu, setShowSyncMenu] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
 
   const handleCopyPath = () => {
     navigator.clipboard.writeText(skill.path);
@@ -88,6 +91,7 @@ export function SkillCard({ skill, tools, syncedTools = [], onRefresh, onConfigu
   };
 
   return (
+    <>
     <motion.div
       whileHover={{ y: -4, scale: 1.01 }}
       transition={{ type: "spring", stiffness: 400, damping: 30 }}
@@ -123,6 +127,11 @@ export function SkillCard({ skill, tools, syncedTools = [], onRefresh, onConfigu
               <Tooltip content="Open Folder">
                 <Button variant="ghost" size="icon" className="h-6 w-6 rounded-md hover:bg-background shadow-sm" onClick={handleOpenFolder}>
                   <FolderOpen className="h-3 w-3 text-muted-foreground" />
+                </Button>
+              </Tooltip>
+              <Tooltip content="View SKILL.md">
+                <Button variant="ghost" size="icon" className="h-6 w-6 rounded-md hover:bg-background shadow-sm" onClick={() => setShowPreview(true)}>
+                  <Eye className="h-3 w-3 text-muted-foreground" />
                 </Button>
               </Tooltip>
             </div>
@@ -217,5 +226,61 @@ export function SkillCard({ skill, tools, syncedTools = [], onRefresh, onConfigu
         </CardFooter>
       </Card>
     </motion.div>
+
+    <Dialog open={showPreview} onOpenChange={setShowPreview}>
+      <DialogContent className="max-w-7xl w-full h-[85vh] flex flex-col p-0 overflow-hidden">
+        <DialogHeader className="px-6 py-4 border-b shrink-0">
+          <DialogTitle className="flex items-center gap-2">
+            <FileText className="h-5 w-5 text-muted-foreground" />
+            {skill.name}
+            <Badge variant="outline" className={`text-[10px] h-5 px-2 font-medium tracking-wide rounded-full ${tierColor}`}>
+              {tier}
+            </Badge>
+          </DialogTitle>
+        </DialogHeader>
+        
+        <div className="flex-1 overflow-hidden flex flex-col gap-6 p-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 shrink-0">
+            <div className="space-y-2">
+              <h4 className="text-sm font-medium leading-none text-muted-foreground">Description</h4>
+              <p className="text-sm leading-relaxed text-foreground/90">
+                {skill.description || "No description provided."}
+              </p>
+            </div>
+            <div className="space-y-2">
+              <h4 className="text-sm font-medium leading-none text-muted-foreground">Path</h4>
+              <div className="rounded-md bg-muted/50 p-2.5 font-mono text-xs break-all select-all border border-border/50">
+                {skill.path}
+              </div>
+            </div>
+          </div>
+          
+          <div className="flex-1 flex flex-col min-h-0 border rounded-xl overflow-hidden shadow-sm bg-card">
+            <div className="px-4 py-3 border-b bg-muted/30 flex items-center justify-between shrink-0">
+              <span className="text-xs font-medium text-muted-foreground flex items-center gap-2">
+                <FileText className="h-3.5 w-3.5" />
+                SKILL.md Content
+              </span>
+              <Badge variant="secondary" className="text-[10px] h-5 px-2">Markdown</Badge>
+            </div>
+            <ScrollArea className="flex-1 bg-zinc-50/50 dark:bg-zinc-950/50">
+              <div className="p-6">
+                {skill.content ? (
+                  <pre className="text-sm font-mono whitespace-pre-wrap leading-relaxed text-foreground/80 selection:bg-primary/20 selection:text-primary">
+                    {skill.content}
+                  </pre>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-20 text-muted-foreground gap-3">
+                    <FileText className="h-10 w-10 opacity-20" />
+                    <p className="text-sm font-medium">No content available</p>
+                  </div>
+                )}
+              </div>
+            </ScrollArea>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }

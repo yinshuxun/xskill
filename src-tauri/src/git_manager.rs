@@ -3,6 +3,18 @@ use std::process::Command;
 use crate::skill_manager::CENTRAL_SKILLS_DIR;
 use tauri::{Emitter, Window};
 
+fn git_cmd() -> Command {
+    let mut cmd = Command::new("git");
+    if let Some(proxy) = crate::utils::get_system_proxy() {
+        cmd.env("http_proxy", &proxy);
+        cmd.env("https_proxy", &proxy);
+        cmd.env("HTTP_PROXY", &proxy);
+        cmd.env("HTTPS_PROXY", &proxy);
+        cmd.env("ALL_PROXY", &proxy);
+    }
+    cmd
+}
+
 pub fn parse_github_tree_url(url: &str) -> Option<(String, String, String)> {
     if let Some(pos) = url.find("/tree/") {
         let repo_url = url[..pos].to_string();
@@ -69,14 +81,14 @@ where
         let temp_dir = std::env::temp_dir().join(format!("xskill_clone_{}", uuid::Uuid::new_v4()));
         
         // 1. Clone sparse
-        let output = Command::new("git")
+        let output = git_cmd()
             .args(["clone", "-n", "--depth=1", "--filter=tree:0", &base_repo, temp_dir.to_str().unwrap()])
             .output()
             .map_err(|e| format!("Failed to execute git clone: {}", e))?;
 
         if !output.status.success() {
             // Fallback for older git without --filter=tree:0
-            let output_fallback = Command::new("git")
+            let output_fallback = git_cmd()
                 .args(["clone", "-n", "--depth=1", &base_repo, temp_dir.to_str().unwrap()])
                 .output()
                 .map_err(|e| format!("Failed to execute git clone fallback: {}", e))?;
@@ -87,7 +99,7 @@ where
         }
 
         // 2. Sparse checkout
-        let output2 = Command::new("git")
+        let output2 = git_cmd()
             .args(["sparse-checkout", "set", "--no-cone", &subpath])
             .current_dir(&temp_dir)
             .output()
@@ -99,7 +111,7 @@ where
         }
 
         // 3. Checkout branch
-        let output3 = Command::new("git")
+        let output3 = git_cmd()
             .args(["checkout", &branch])
             .current_dir(&temp_dir)
             .output()
@@ -127,7 +139,7 @@ where
     // Normal clone
     progress(format!("Cloning {}...", repo_url));
     
-    let output = Command::new("git")
+    let output = git_cmd()
         .args(["clone", repo_url, target_dir])
         .output()
         .map_err(|e| format!("Failed to execute git clone: {}", e))?;
@@ -164,7 +176,7 @@ pub async fn update_skill(skill_dir: String) -> Result<(), String> {
         return Err(format!("Directory does not exist: {}", skill_dir));
     }
 
-    let output = Command::new("git")
+    let output = git_cmd()
         .args(["pull", "--ff-only"])
         .current_dir(skill_path)
         .output()

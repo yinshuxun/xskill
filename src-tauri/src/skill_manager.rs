@@ -227,6 +227,32 @@ pub fn delete_skill(path: String) -> Result<(), String> {
 }
 
 #[tauri::command]
+pub fn get_project_skills(project_path: String) -> Result<Vec<LocalSkill>, String> {
+    let project_path_buf = PathBuf::from(&project_path);
+    if !project_path_buf.exists() {
+        return Err("Project path does not exist".to_string());
+    }
+
+    let mut skills = Vec::new();
+    let defs = tool_definitions();
+
+    for def in defs {
+        // Construct path: project_path / tool_specific_subdir
+        let tool_skills_path = project_path_buf.join(def.skills_subdir);
+        if tool_skills_path.exists() {
+            let tool_skills = read_skills_from_dir(&tool_skills_path, def.key);
+            skills.extend(tool_skills);
+        }
+    }
+    
+    // Deduplicate by path
+    skills.sort_by(|a, b| a.path.cmp(&b.path));
+    skills.dedup_by(|a, b| a.path == b.path);
+    
+    Ok(skills)
+}
+
+#[tauri::command]
 pub fn get_all_local_skills() -> Result<Vec<LocalSkill>, String> {
     let mut all_skills = Vec::new();
     let home = home_dir()?;

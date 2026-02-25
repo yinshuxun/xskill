@@ -98,14 +98,36 @@ This document tracks the development progress of XSkill.
     - [x] Add "Link (Live Update)" option in Apply/Sync dialog.
     - [x] Implement backend symlink logic for cross-platform support.
 - [x] **Enhanced Hub Management**:
-    - [x] **Hub Page**: Master list view of all available skills.
-    - [x] **My Skills Page**: View installed skills grouped by Agent with badges.
-    - [x] **Marketplace**: JSON-based feed with Virtual Scroll and Search.
-- [x] **UI Polish**:
-    - [x] Remove top-left icon.
-    - [x] Version bump to 0.3.0.
 
-## Phase 5: v0.4.0 Intelligence & Automation (Future)
+---
+
+## Phase 5: Performance & Refactoring (v0.3.1) 🚧
+*Goal: Address user feedback on performance, network resilience, and multi-agent project support.*
+
+### 5.1 Network & Proxy Resilience
+- [x] **Proxy Support**: Inject system proxy environment variables into `git` subprocesses on macOS.
+- [x] **Enhanced Error Handling**: Better error messages for network failures during import.
+
+### 5.2 Project Skill Management Refactor
+- [x] **Backend: Project Skill Scanning**: Implement `get_project_skills(path)` in Rust to scan for skills across all supported agents (not just hardcoded paths).
+- [x] **Backend: Agent-Aware Add**: Update `add_skill_to_project` to accept `agent` parameter (e.g. "cursor", "claude") to determine target path.
+- [x] **Frontend: Manage Dialog**: Use new backend command to list skills; group by Agent.
+- [x] **Frontend: Apply Dialog**: Add Agent selection dropdown when adding skills to a project.
+
+### 5.3 UI/UX Performance Optimization
+- [x] **Debounced Search**: Optimize `ProjectsPage` filtering to prevent stutter on fast typing.
+- [x] **Navigation Optimization**: Debounce or cancel pending requests when switching tabs rapidly.
+- [x] **Sticky Headers**: Fix CSS to ensure page-specific toolbars (Search, Filter) stick to the top during scroll.
+
+### 5.4 Feature Enhancements
+- [x] **Skill Preview**: Add ability to click/preview `SKILL.md` content directly from Skill Card.
+
+### 5.5 UI Polish
+- [x] **Scrollbar Optimization**:
+    - [x] Remove horizontal scrollbar from all pages (overflow-x-hidden).
+    - [x] Custom thinner/nicer vertical scrollbar styling.
+
+## Phase 6: v0.4.0 Intelligence & Automation (Future)
 - [ ] **AI Search**: "Find me a skill to handle PDF files" -> recommends from Marketplace.
 - [ ] **System Tray**: Quick access from menu bar.
 - [ ] **XSkill website**: Quick View In a vercel page, support view xskill & download xskill.dmg

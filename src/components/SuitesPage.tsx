@@ -57,8 +57,8 @@ export function SuitesPage() {
   }
 
   return (
-    <div className="space-y-8">
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+    <div className="min-h-full pb-10 px-10 space-y-8">
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 sticky top-0 z-50 bg-zinc-50/95 dark:bg-zinc-950/95 backdrop-blur-md py-6 -mx-10 px-10 border-b border-border/5 shadow-sm">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">Suites & Kits</h2>
           <p className="text-muted-foreground text-sm mt-1.5 font-medium">

@@ -28,6 +28,28 @@
 * **AI 的盲区**: `cargo test` 默认是多线程并发执行的。所有的测试用例都在同时修改同一个 `XSKILL_TEST_HOME` 环境变量并疯狂读写同一个模拟沙箱，导致互相覆盖和清空。
 * **修复经验**: 在配置 CI 和 `package.json` 时，必须为全局环境变量依赖的集成测试加上 `cargo test -- --test-threads=1` 串行执行锁。
 
+### 5. macOS 环境变量陷阱 (GUI vs Terminal)
+* **Bug 场景**: 用户反馈“不开 Clash 增强模式无法下载 Skill”，但终端下 `git clone` 正常。
+* **原因**: macOS GUI 应用（如从 Spotlight 启动）**不会继承 Shell 配置文件**（`.zshrc`, `.bashrc`）中的环境变量。这意味着 `http_proxy` / `https_proxy` 等代理设置对 Tauri 后端调用的子进程（如 `git`）不可见。
+* **修复经验**: 必须在应用层显式处理代理配置，或者提示用户从终端启动应用以继承环境。对于 `Command::new("git")`，需要通过 `scutil --proxy` (macOS) 或注册表 (Windows) 主动获取系统代理，并手动注入到子进程环境变量中。
+
+### 6. 前端文件系统权限边界与性能陷阱
+* **Bug 场景**: 试图在前端直接调用 `fs.readDir` 扫描任意项目路径下的 `.cursor/skills`，导致静默失败或空列表。
+* **原因**: Tauri 的前端 FS API 受限于 `capabilities` 配置的 Scope（通常是 App 数据目录或特定白名单）。任意用户的代码项目路径通常不在白名单内。
+* **修复经验**: **不要在前端做全盘扫描**。涉及文件系统的核心逻辑（尤其是扫描用户任意路径）必须下沉到 Rust 后端，通过 Command 暴露给前端。
+
+### 7. React 渲染性能与去抖动
+* **Bug 场景**: 项目列表过滤输入过快导致界面卡顿；左侧导航切换过快导致卡顿。
+* **原因**: `useMemo` 或 `useEffect` 在每次按键或状态变更时立即执行重计算或触发后端 IPC 调用，阻塞了 UI 线程。
+* **修复经验**:
+  * **搜索过滤**: 对输入框 `onChange` 进行 `debounce` 处理（如 300ms 延迟），避免每输入一个字符就触发一次重渲染。
+  * **导航切换**: 使用 React `useTransition` 钩子包裹路由/Tab 切换逻辑，将状态更新标记为非紧急，允许 React 优先响应用户交互，避免 UI 冻结。
+
+### 8. CSS Sticky 定位与父容器滚动
+* **Bug 场景**: 页面内的 Sticky Header 在滚动时消失或被遮挡。
+* **原因**: `sticky` 定位的元素是相对于其最近的**滚动祖先**（scrolling ancestor）进行定位的。如果使用了 `top-[-40px]` 试图修正视觉位置，会导致元素吸附在视口之外。同时，父容器的 `overflow` 属性会影响 sticky 的生效范围。
+* **修复经验**: 确保 `sticky` 元素的 `top` 值是视口内的有效值（如 `top-0`）。如果父容器有 padding，需要注意 sticky 元素会吸附在 content box 的边缘，可能需要配合负 margin (`-mt`) 来抵消 padding 的影响，或者调整 DOM 结构将 sticky 元素置于 padding 之外。
+
 ---
 
 ## 🎨 二、借助云端 Skill 进行架构与审美升维

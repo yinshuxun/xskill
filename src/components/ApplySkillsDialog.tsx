@@ -4,8 +4,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-import { RefreshCw, Search, CheckCircle2 } from "lucide-react";
-import type { Project, LocalSkill } from "@/hooks/useAppStore";
+import { RefreshCw, Search, CheckCircle2, Box } from "lucide-react";
+import { useAppStore, type Project, type LocalSkill } from "@/hooks/useAppStore";
 import type { Suite } from "@/hooks/useSuitesStore";
 
 interface ApplySkillsDialogProps {
@@ -16,8 +16,10 @@ interface ApplySkillsDialogProps {
 }
 
 export function ApplySkillsDialog({ isOpen, onClose, project, skills }: ApplySkillsDialogProps) {
+  const { tools } = useAppStore();
   const [selectedSkillPaths, setSelectedSkillPaths] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedAgent, setSelectedAgent] = useState("cursor");
   const [applying, setApplying] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -59,7 +61,8 @@ export function ApplySkillsDialog({ isOpen, onClose, project, skills }: ApplySki
     try {
       await invoke("apply_suite", {
         projectPath: project.path,
-        suite: tempSuite
+        suite: tempSuite,
+        agent: selectedAgent
       });
       setSuccess(true);
       setTimeout(() => {
@@ -88,13 +91,29 @@ export function ApplySkillsDialog({ isOpen, onClose, project, skills }: ApplySki
         </DialogHeader>
 
         <div className="flex items-center gap-2 my-2">
-            <Search className="h-4 w-4 text-muted-foreground" />
-            <Input 
-                placeholder="Search skills..." 
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="flex-1"
-            />
+            <div className="relative min-w-[140px]">
+              <Box className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground pointer-events-none" />
+              <select
+                value={selectedAgent}
+                onChange={(e) => setSelectedAgent(e.target.value)}
+                className="h-9 w-full rounded-md border border-input bg-background pl-9 pr-3 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 appearance-none cursor-pointer"
+              >
+                {tools.map((tool) => (
+                  <option key={tool.key} value={tool.key}>
+                    {tool.display_name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="relative flex-1">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground pointer-events-none" />
+              <Input 
+                  placeholder="Search skills..." 
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9 h-9"
+              />
+            </div>
         </div>
 
         <div className="flex-1 overflow-y-auto border rounded-md p-2 min-h-[300px]">

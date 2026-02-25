@@ -208,7 +208,7 @@ export function MarketplacePage() {
 
   return (
     <div className="flex flex-col h-full space-y-6">
-      <div className="mb-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 shrink-0">
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 shrink-0 sticky top-0 z-50 bg-zinc-50/95 dark:bg-zinc-950/95 backdrop-blur-md px-10 py-6 border-b border-border/5 shadow-sm">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">Marketplace</h2>
           <p className="text-muted-foreground text-sm mt-1.5 font-medium">
@@ -231,6 +231,7 @@ export function MarketplacePage() {
         </div>
       </div>
 
+      <div className="px-10 flex-1 min-h-0 relative z-0">
       {loading && (
         <div className="flex flex-col items-center justify-center py-32 text-muted-foreground">
           <RefreshCw className="h-6 w-6 animate-spin mb-4 text-primary" />
@@ -259,7 +260,7 @@ export function MarketplacePage() {
       )}
 
       {!loading && !error && filteredSkills.length > 0 && (
-        <div className="flex-1 min-h-0 relative z-0">
+        <div className="h-full">
             <AutoSizer>
                 {({ height, width }: { height: number; width: number }) => {
                     const columnCount = Math.floor(width / 320) || 1;
@@ -275,7 +276,7 @@ export function MarketplacePage() {
                             height={height}
                             rowCount={rowCount}
                             rowHeight={ROW_HEIGHT}
-                            width={width - 4}
+                            width={width}
                             itemData={currentItemData}
                             className="overflow-x-hidden"
                         >
@@ -286,6 +287,7 @@ export function MarketplacePage() {
             </AutoSizer>
         </div>
       )}
+      </div>
     </div>
   );
 }

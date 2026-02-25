@@ -27,6 +27,7 @@ pub fn run() {
             skill_manager::get_installed_tools,
             skill_manager::get_skills_for_tool,
             skill_manager::get_all_local_skills,
+            skill_manager::get_project_skills,
             skill_manager::delete_skill,
             scaffold::create_skill,
             ide_sync::sync_skill,

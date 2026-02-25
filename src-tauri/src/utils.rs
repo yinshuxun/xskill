@@ -45,3 +45,63 @@ pub fn copy_dir_all(src: &PathBuf, dst: &PathBuf) -> Result<(), String> {
 pub fn open_folder(path: String) -> Result<(), String> {
     open::that(&path).map_err(|e| format!("Failed to open folder: {}", e))
 }
+
+pub fn get_system_proxy() -> Option<String> {
+    if cfg!(target_os = "macos") {
+        let output = std::process::Command::new("scutil")
+            .arg("--proxy")
+            .output()
+            .ok()?;
+        
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        
+        // Simple parsing for HTTP proxy
+        // Looking for "HTTPEnable : 1"
+        let http_enabled = stdout.contains("HTTPEnable : 1");
+        let https_enabled = stdout.contains("HTTPSEnable : 1");
+        
+        if http_enabled || https_enabled {
+            let mut http_host = String::new();
+            let mut http_port = String::new();
+            let mut https_host = String::new();
+            let mut https_port = String::new();
+            
+            for line in stdout.lines() {
+                let line = line.trim();
+                // Match "HTTPProxy : 127.0.0.1"
+                if line.starts_with("HTTPProxy :") {
+                    if let Some(val) = line.split(':').nth(1) {
+                        http_host = val.trim().to_string();
+                    }
+                }
+                // Match "HTTPPort : 7890"
+                if line.starts_with("HTTPPort :") {
+                    if let Some(val) = line.split(':').nth(1) {
+                        http_port = val.trim().to_string();
+                    }
+                }
+                // Match "HTTPSProxy : 127.0.0.1"
+                if line.starts_with("HTTPSProxy :") {
+                    if let Some(val) = line.split(':').nth(1) {
+                        https_host = val.trim().to_string();
+                    }
+                }
+                // Match "HTTPSPort : 7890"
+                if line.starts_with("HTTPSPort :") {
+                    if let Some(val) = line.split(':').nth(1) {
+                        https_port = val.trim().to_string();
+                    }
+                }
+            }
+            
+            // Prefer HTTPS proxy if enabled, fallback to HTTP
+            if https_enabled && !https_host.is_empty() && !https_port.is_empty() {
+                return Some(format!("http://{}:{}", https_host, https_port));
+            }
+            if http_enabled && !http_host.is_empty() && !http_port.is_empty() {
+                return Some(format!("http://{}:{}", http_host, http_port));
+            }
+        }
+    }
+    None
+}

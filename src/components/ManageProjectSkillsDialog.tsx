@@ -1,11 +1,10 @@
 import { useState, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { readDir } from "@tauri-apps/plugin-fs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { RefreshCw, Trash2, FolderOpen } from "lucide-react";
-import type { Project } from "@/hooks/useAppStore";
+import type { Project, LocalSkill } from "@/hooks/useAppStore";
 
 interface ManageProjectSkillsDialogProps {
   isOpen: boolean;
@@ -13,14 +12,8 @@ interface ManageProjectSkillsDialogProps {
   project: Project | null;
 }
 
-interface ProjectSkill {
-  name: string;
-  path: string;
-  source: string; // ".cursor/skills", ".agent/skills", etc.
-}
-
 export function ManageProjectSkillsDialog({ isOpen, onClose, project }: ManageProjectSkillsDialogProps) {
-  const [skills, setSkills] = useState<ProjectSkill[]>([]);
+  const [skills, setSkills] = useState<LocalSkill[]>([]);
   const [loading, setLoading] = useState(false);
   const [deletingPath, setDeletingPath] = useState<string | null>(null);
 
@@ -29,66 +22,12 @@ export function ManageProjectSkillsDialog({ isOpen, onClose, project }: ManagePr
     setLoading(true);
     setSkills([]);
     
-    const foundSkills: ProjectSkill[] = [];
-    const searchPaths = [
-      { dir: ".cursor/skills", source: "Cursor" },
-      { dir: ".vscode/skills", source: "VSCode" },
-      { dir: ".agent/skills", source: "Agent" },
-      { dir: ".windsurf/skills", source: "Windsurf" }
-    ];
-
     try {
-      for (const { dir, source } of searchPaths) {
-        try {
-            // We construct the absolute path manually because readDir with BaseDirectory is for sandboxed paths,
-            // but here we are accessing arbitrary project paths.
-            // However, tauri-plugin-fs usually requires scope permissions.
-            // If the user has configured scan_roots, we might have access.
-            // But readDir on absolute path might fail if not allowed.
-            // Let's assume we can read inside the project path.
-            // Note: In Tauri v2, we might need to use absolute paths directly if allowed by capability.
-            
-            // Wait, tauri-plugin-fs `readDir` takes a path.
-            // We'll try to read project.path + "/" + dir
-            const fullDirPath = `${project.path}/${dir}`;
-            
-            // We can't easily check if dir exists without trying to read it.
-            // Using invoke("read_dir") from backend might be safer if we exposed it, 
-            // but let's try frontend fs first.
-            // Actually, `readDir` throws if path doesn't exist.
-            
-            // Since we can't easily use frontend fs on arbitrary paths without scope configuration,
-            // maybe we should assume the backend `scan_workspace` already checked for these folders?
-            // `project.has_mcp` etc. doesn't tell us about specific skills.
-            
-            // Workaround: We can use `invoke("get_all_local_skills")` and filter by project path!
-            // Wait, I previously established `get_all_local_skills` might not scan projects.
-            // But if `ApplySuite` puts skills there, maybe we should rely on `get_all_local_skills` 
-            // IF we update the scanner to include project paths?
-            // No, that's backend work.
-            
-            // Let's try to use `readDir` on the absolute path.
-            // Note: This requires the path to be in the allowed scope.
-            // If it fails, we show an empty list or error.
-            
-            const entries = await readDir(fullDirPath);
-            for (const entry of entries) {
-                if (entry.isDirectory) {
-                    foundSkills.push({
-                        name: entry.name,
-                        path: `${fullDirPath}/${entry.name}`,
-                        source
-                    });
-                }
-            }
-        } catch {
-            // Ignore errors (dir not found, etc)
-        }
-      }
+      const result = await invoke<LocalSkill[]>("get_project_skills", { projectPath: project.path });
+      setSkills(result);
     } catch (e) {
         console.error("Failed to scan project skills", e);
     } finally {
-        setSkills(foundSkills);
         setLoading(false);
     }
   };
@@ -113,11 +52,19 @@ export function ManageProjectSkillsDialog({ isOpen, onClose, project }: ManagePr
     }
   };
 
+  // Group skills by tool_key
+  const groupedSkills = skills.reduce((acc, skill) => {
+    const key = skill.tool_key || 'unknown';
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(skill);
+    return acc;
+  }, {} as Record<string, LocalSkill[]>);
+
   if (!project) return null;
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle>Manage Project Skills</DialogTitle>
           <DialogDescription className="truncate" title={project.path}>
@@ -137,32 +84,48 @@ export function ManageProjectSkillsDialog({ isOpen, onClose, project }: ManagePr
                 <p className="text-xs mt-1">Check .cursor/skills or .vscode/skills</p>
              </div>
           ) : (
-             <div className="space-y-2">
-                {skills.map(skill => (
-                    <div key={skill.path} className="flex items-center justify-between p-3 rounded-md border bg-card">
-                        <div className="min-w-0">
-                            <div className="flex items-center gap-2">
-                                <span className="font-medium truncate">{skill.name}</span>
-                                <Badge variant="secondary" className="text-[10px] h-4 px-1">{skill.source}</Badge>
+             <div className="space-y-6">
+                {Object.entries(groupedSkills).map(([toolKey, toolSkills]) => (
+                  <div key={toolKey} className="space-y-2">
+                    <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground pl-1">
+                      {toolKey === 'cursor' ? 'Cursor Agent' : 
+                       toolKey === 'claude' ? 'Claude Desktop' : 
+                       toolKey}
+                    </h3>
+                    <div className="space-y-2">
+                      {toolSkills.map(skill => (
+                        <div key={skill.path} className="flex items-center justify-between p-3 rounded-md border bg-card">
+                            <div className="min-w-0 pr-4">
+                                <div className="flex items-center gap-2">
+                                    <span className="font-medium truncate">{skill.name}</span>
+                                    {/* <Badge variant="secondary" className="text-[10px] h-4 px-1">{skill.tool_key}</Badge> */}
+                                </div>
+                                <div className="text-xs text-muted-foreground truncate mt-0.5" title={skill.path}>
+                                    {skill.path.split('/').slice(-4).join('/')}
+                                </div>
+                                {skill.description && (
+                                    <div className="text-xs text-muted-foreground/80 truncate mt-1">
+                                        {skill.description}
+                                    </div>
+                                )}
                             </div>
-                            <div className="text-xs text-muted-foreground truncate mt-0.5" title={skill.path}>
-                                {skill.path.split('/').slice(-3).join('/')}
-                            </div>
+                            <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="text-muted-foreground hover:text-destructive shrink-0"
+                                onClick={() => handleDelete(skill.path)}
+                                disabled={!!deletingPath}
+                            >
+                                {deletingPath === skill.path ? (
+                                    <RefreshCw className="h-4 w-4 animate-spin" />
+                                ) : (
+                                    <Trash2 className="h-4 w-4" />
+                                )}
+                            </Button>
                         </div>
-                        <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="text-muted-foreground hover:text-destructive shrink-0"
-                            onClick={() => handleDelete(skill.path)}
-                            disabled={!!deletingPath}
-                        >
-                            {deletingPath === skill.path ? (
-                                <RefreshCw className="h-4 w-4 animate-spin" />
-                            ) : (
-                                <Trash2 className="h-4 w-4" />
-                            )}
-                        </Button>
+                      ))}
                     </div>
+                  </div>
                 ))}
              </div>
           )}

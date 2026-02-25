@@ -1,6 +1,5 @@
-import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { CloudDownload, BookOpen, Plus, ScanSearch, Box, Layers, LayoutGrid } from "lucide-react";
+import { useState, useEffect, useTransition } from "react";
+import { CloudDownload, BookOpen, Layers, LayoutGrid, Box } from "lucide-react";
 import { NewSkillDialog } from "@/components/NewSkillDialog";
 import { OnboardingDialog } from "@/components/OnboardingDialog";
 import { SkillConfigDialog } from "@/components/SkillConfigDialog";
@@ -17,16 +16,16 @@ type Page = "hub" | "my-skills" | "marketplace" | "projects" | "suites";
 function App() {
   const { skills, tools, loadingSkills, refreshSkills } = useAppStore();
   const [page, setPage] = useState<Page>("hub");
+  const [isPending, startTransition] = useTransition();
   const [isNewSkillModalOpen, setIsNewSkillModalOpen] = useState(false);
   const [isOnboardingModalOpen, setIsOnboardingModalOpen] = useState(false);
   const [configuringSkill, setConfiguringSkill] = useState<LocalSkill | null>(null);
 
   useEffect(() => {
-    if (page === "hub" || page === "my-skills") {
+    if ((page === "hub" || page === "my-skills") && !loadingSkills) {
       refreshSkills();
     }
-  }, [page, refreshSkills]);
-
+  }, [page]);
 
   const navItems: { id: Page; label: string; icon: React.ReactNode }[] = [
     { id: "hub", label: "XSkill Hub", icon: <LayoutGrid className="mr-3 h-4 w-4 opacity-70" /> },
@@ -67,15 +66,19 @@ function App() {
                 />
               )}
               <button
+                disabled={isPending}
                 className={`relative flex w-full items-center h-10 px-4 text-sm font-medium rounded-lg transition-colors cursor-pointer ${
                   page === item.id 
                     ? "text-primary" 
                     : "text-muted-foreground hover:text-foreground hover:bg-muted/30"
-                }`}
-                onClick={() => setPage(item.id)}
+                } ${isPending ? "opacity-50 cursor-wait" : ""}`}
+                onClick={() => startTransition(() => setPage(item.id))}
               >
                 {item.icon}
                 {item.label}
+                {isPending && page !== item.id && (
+                   <span className="absolute right-2 h-1.5 w-1.5 rounded-full bg-primary/40 animate-pulse" />
+                )}
               </button>
             </div>
           ))}
@@ -92,27 +95,7 @@ function App() {
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col bg-zinc-50/50 dark:bg-zinc-950/50 relative">
-        <header className="h-[88px] flex items-center justify-between px-10 border-b border-border/30 bg-background/50 backdrop-blur-md sticky top-0 z-10">
-          <div className="flex items-center">
-            <h2 className="text-2xl font-semibold tracking-tight capitalize">{page.replace("-", " ")}</h2>
-          </div>
-          {page === "hub" && (
-            <motion.div 
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="flex items-center space-x-3"
-            >
-              <Button variant="outline" onClick={() => setIsOnboardingModalOpen(true)} className="h-10 rounded-xl shadow-sm hover:shadow transition-all border-border/50 bg-background font-medium">
-                <ScanSearch className="mr-2 h-4 w-4 opacity-70" /> Import Skills
-              </Button>
-              <Button onClick={() => setIsNewSkillModalOpen(true)} className="h-10 rounded-xl shadow-md bg-primary hover:bg-primary/90 text-primary-foreground font-medium transition-transform active:scale-[0.98]">
-                <Plus className="mr-2 h-4 w-4" /> New Skill
-              </Button>
-            </motion.div>
-          )}
-        </header>
-
-        <main className="flex-1 p-10 overflow-y-auto scroll-smooth">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden scroll-smooth">
           <motion.div
             key={page}
             initial={{ opacity: 0, y: 10 }}
@@ -127,6 +110,8 @@ function App() {
                 onRefresh={refreshSkills}
                 tools={tools}
                 onConfigure={setConfiguringSkill}
+                onImport={() => setIsOnboardingModalOpen(true)}
+                onNewSkill={() => setIsNewSkillModalOpen(true)}
               />
             )}
 

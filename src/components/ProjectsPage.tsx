@@ -29,6 +29,7 @@ export function ProjectsPage() {
   const [applyingSkillsProject, setApplyingSkillsProject] = useState<Project | null>(null);
   const [managingProject, setManagingProject] = useState<Project | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
 
   useEffect(() => {
     if (projects.length === 0) {
@@ -36,20 +37,27 @@ export function ProjectsPage() {
     }
   }, [scanProjects, projects.length]);
 
+  useEffect(() => {
+    const handler = setTimeout(() => {
+        setDebouncedQuery(searchQuery);
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [searchQuery]);
+
   const filteredProjects = useMemo(() => {
     return projects.filter(p => 
-      p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.path.toLowerCase().includes(searchQuery.toLowerCase())
+      p.name.toLowerCase().includes(debouncedQuery.toLowerCase()) ||
+      p.path.toLowerCase().includes(debouncedQuery.toLowerCase())
     );
-  }, [projects, searchQuery]);
+  }, [projects, debouncedQuery]);
 
   const hubSkills = useMemo(() => {
     return skills.filter(s => s.path.includes(".xskill/hub") || s.path.includes(".xskill/skills"));
   }, [skills]);
 
   return (
-    <div className="space-y-8">
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+    <div className="min-h-full pb-10 px-10 relative space-y-8">
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 sticky top-0 z-50 bg-zinc-50/95 dark:bg-zinc-950/95 backdrop-blur-md py-6 -mx-10 px-10 border-b border-border/5 shadow-sm">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">Workspace Projects</h2>
           <p className="text-muted-foreground text-sm mt-1.5 font-medium">
