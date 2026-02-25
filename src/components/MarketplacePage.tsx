@@ -187,7 +187,7 @@ export function MarketplacePage() {
     
     try {
       await invoke("install_skill_from_url", {
-        repo_url: skill.githubUrl,
+        repoUrl: skill.githubUrl,
       });
       refreshSkills(); 
       alert(`✅ "${skill.name}" installed successfully! Go to Hub to view.`);

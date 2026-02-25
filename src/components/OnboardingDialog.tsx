@@ -117,7 +117,7 @@ export function OnboardingDialog({
     setGitLoading(true);
     setGitStatus("Initializing...");
     try {
-        await invoke("install_skill_from_url", { repo_url: gitUrl });
+        await invoke("install_skill_from_url", { repoUrl: gitUrl });
         setGitStatus("Success!");
         setTimeout(() => {
             onImportComplete();
