@@ -59,7 +59,7 @@ describe('MarketplacePage', () => {
     localStorage.clear();
     
     // Mock fetch
-    global.fetch = vi.fn(() => 
+    window.fetch = vi.fn(() => 
       Promise.resolve({
         ok: true,
         json: () => Promise.resolve([]),
@@ -76,7 +76,7 @@ describe('MarketplacePage', () => {
     localStorage.setItem('marketplace_cache', JSON.stringify(mockSkills));
     
     // Mock fetch to delay
-    (global.fetch as Mock).mockImplementation(() => new Promise((resolve) => {
+    (window.fetch as Mock).mockImplementation(() => new Promise((resolve) => {
         setTimeout(() => resolve({
             ok: true,
             json: () => Promise.resolve([])
@@ -94,7 +94,7 @@ describe('MarketplacePage', () => {
 
   it('shows loading spinner if no cache', async () => {
     // No cache
-    (global.fetch as Mock).mockImplementation(() => new Promise(() => {})); // Never resolves
+    (window.fetch as Mock).mockImplementation(() => new Promise(() => {})); // Never resolves
 
     render(<MarketplacePage />);
 
@@ -104,7 +104,7 @@ describe('MarketplacePage', () => {
   it('updates cache after successful fetch', async () => {
     // Mock fetch returns new data
     const newSkills = [{ ...mockSkills[0], name: 'Updated Skill' }];
-    (global.fetch as Mock).mockResolvedValue({
+    (window.fetch as Mock).mockResolvedValue({
       ok: true,
       json: () => Promise.resolve(newSkills),
     } as Response);
@@ -124,7 +124,7 @@ describe('MarketplacePage', () => {
     localStorage.setItem('marketplace_cache', JSON.stringify(mockSkills));
     
     // Mock fetch failure
-    (global.fetch as Mock).mockRejectedValue(new Error('Network error'));
+    (window.fetch as Mock).mockRejectedValue(new Error('Network error'));
 
     render(<MarketplacePage />);
 
@@ -137,7 +137,7 @@ describe('MarketplacePage', () => {
 
   it('shows error when fetch fails and no cache', async () => {
     // No cache
-    (global.fetch as Mock).mockRejectedValue(new Error('Network error'));
+    (window.fetch as Mock).mockRejectedValue(new Error('Network error'));
 
     render(<MarketplacePage />);
 
