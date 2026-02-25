@@ -140,9 +140,29 @@ export function MarketplacePage() {
     return names;
   }, [localSkills]);
 
-  const fetchMarketplace = async () => {
-    setLoading(true);
-    setError(null);
+  const fetchMarketplace = async (isManualEvent?: React.MouseEvent) => {
+    const isManual = !!isManualEvent;
+    
+    // Try to load from cache first if not manual refresh
+    let cachedData = null;
+    if (!isManual) {
+        const cached = localStorage.getItem("marketplace_cache");
+        if (cached) {
+            try {
+                cachedData = JSON.parse(cached);
+                if (Array.isArray(cachedData)) {
+                    setSkills(cachedData);
+                    setFilteredSkills(cachedData);
+                }
+            } catch (e) {
+                console.error("Failed to parse marketplace cache", e);
+            }
+        }
+    }
+ 
+     setLoading(true);
+ 
+     setError(null);
     try {
       let data;
       try {
@@ -157,11 +177,16 @@ export function MarketplacePage() {
       if (Array.isArray(data)) {
         setSkills(data);
         setFilteredSkills(data);
+        localStorage.setItem("marketplace_cache", JSON.stringify(data));
       } else {
-        setError("Invalid data format received.");
+        if (skills.length === 0) {
+            setError("Invalid data format received.");
+        }
       }
     } catch {
-      setError("Failed to load marketplace data. Please check your internet connection.");
+      if (skills.length === 0) {
+        setError("Failed to load marketplace data. Please check your internet connection.");
+      }
     } finally {
       setLoading(false);
     }
@@ -232,21 +257,21 @@ export function MarketplacePage() {
       </div>
 
       <div className="px-10 flex-1 min-h-0 relative z-0">
-      {loading && (
+      {loading && skills.length === 0 && (
         <div className="flex flex-col items-center justify-center py-32 text-muted-foreground">
           <RefreshCw className="h-6 w-6 animate-spin mb-4 text-primary" />
           <p className="text-sm font-medium tracking-wide">Syncing marketplace...</p>
         </div>
       )}
 
-      {!loading && error && (
+      {!loading && error && skills.length === 0 && (
         <div className="flex flex-col items-center justify-center py-20 text-destructive bg-destructive/5 rounded-3xl border border-destructive/20">
           <AlertCircle className="h-8 w-8 mb-3" />
           <p className="font-medium">{error}</p>
         </div>
       )}
 
-      {!loading && !error && filteredSkills.length === 0 && (
+      {!error && skills.length > 0 && filteredSkills.length === 0 && (
         <motion.div 
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -259,7 +284,7 @@ export function MarketplacePage() {
         </motion.div>
       )}
 
-      {!loading && !error && filteredSkills.length > 0 && (
+      {!error && filteredSkills.length > 0 && (
         <div className="h-full">
             <AutoSizer>
                 {({ height, width }: { height: number; width: number }) => {

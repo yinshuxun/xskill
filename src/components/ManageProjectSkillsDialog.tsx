@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { RefreshCw, Trash2, FolderOpen } from "lucide-react";
 import type { Project, LocalSkill } from "@/hooks/useAppStore";
 
@@ -24,7 +23,7 @@ export function ManageProjectSkillsDialog({ isOpen, onClose, project }: ManagePr
     
     try {
       const result = await invoke<LocalSkill[]>("get_project_skills", { projectPath: project.path });
-      setSkills(result);
+      setSkills(result || []);
     } catch (e) {
         console.error("Failed to scan project skills", e);
     } finally {

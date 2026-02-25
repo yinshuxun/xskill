@@ -3,16 +3,11 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ManageProjectSkillsDialog } from './ManageProjectSkillsDialog';
 import { Project } from '@/hooks/useAppStore';
 import { invoke } from '@tauri-apps/api/core';
-import { readDir } from '@tauri-apps/plugin-fs';
 import { act } from 'react';
 
 // Mock dependencies
 vi.mock('@tauri-apps/api/core', () => ({
   invoke: vi.fn(),
-}));
-
-vi.mock('@tauri-apps/plugin-fs', () => ({
-  readDir: vi.fn(),
 }));
 
 // Provide proper lucide mock
@@ -40,20 +35,24 @@ describe('ManageProjectSkillsDialog Integration', () => {
     vi.clearAllMocks();
     
     // Setup generic successful invoke
-    (invoke as any).mockResolvedValue(null);
+    (invoke as unknown as ReturnType<typeof vi.fn>).mockImplementation((cmd: string) => {
+      if (cmd === 'get_project_skills') {
+        return Promise.resolve([
+          { 
+            name: 'cursor-skill-1', 
+            path: '/users/home/workspace/test-project/.cursor/skills/cursor-skill-1',
+            tool_key: 'cursor',
+            description: 'Test skill',
+            disable_model_invocation: false,
+            allowed_tools: []
+          }
+        ]);
+      }
+      return Promise.resolve(null);
+    });
   });
 
   it('renders correctly and tries to load skills from project directories', async () => {
-    // Setup mock responses
-    (readDir as any).mockImplementation((path: string) => {
-      if (path.includes('.cursor')) {
-        return Promise.resolve([
-          { name: 'cursor-skill-1', isDirectory: true },
-        ]);
-      }
-      return Promise.reject(new Error('Directory not found'));
-    });
-
     await act(async () => {
       render(
         <ManageProjectSkillsDialog 
@@ -68,22 +67,13 @@ describe('ManageProjectSkillsDialog Integration', () => {
     expect(screen.getByText('Manage Project Skills')).toBeInTheDocument();
     expect(screen.getByText('Skills installed in test-project')).toBeInTheDocument();
 
-    // Wait for the simulated filesystem read to complete
+    // Wait for the simulated invoke to complete
     await waitFor(() => {
       expect(screen.getByText('cursor-skill-1')).toBeInTheDocument();
     });
   });
 
   it('handles deleting a skill via invoke', async () => {
-    (readDir as any).mockImplementation((path: string) => {
-      if (path.includes('.cursor')) {
-        return Promise.resolve([
-          { name: 'cursor-skill-1', isDirectory: true },
-        ]);
-      }
-      return Promise.reject(new Error('Directory not found'));
-    });
-
     await act(async () => {
       render(
         <ManageProjectSkillsDialog 

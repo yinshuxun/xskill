@@ -127,6 +127,12 @@ This document tracks the development progress of XSkill.
     - [x] Remove horizontal scrollbar from all pages (overflow-x-hidden).
     - [x] Custom thinner/nicer vertical scrollbar styling.
 
+### 5.6 Build & Stability
+- [x] **Test Suite Fixes**:
+    - [x] Fix React component tests (ManageProjectSkillsDialog, SkillCard).
+    - [x] Fix Rust integration tests (missing imports, argument mismatch).
+    - [x] Ensure `npm run test:all` passes cleanly.
+
 ## Phase 6: v0.4.0 Intelligence & Automation (Future)
 - [ ] **AI Search**: "Find me a skill to handle PDF files" -> recommends from Marketplace.
 - [ ] **System Tray**: Quick access from menu bar.

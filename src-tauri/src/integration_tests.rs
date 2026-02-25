@@ -6,13 +6,11 @@ mod tests {
     use tempfile::TempDir;
 
     use crate::scaffold::create_skill;
-    use crate::ide_sync::{sync_skill, skill_collect_to_hub};
+    use crate::ide_sync::sync_skill;
     use crate::skill_manager::{delete_skill, get_all_local_skills};
-    use crate::config_manager::{get_skill_config, save_skill_config, SkillConfig};
-    use crate::scanner::scan_workspace;
-    use crate::suite_manager::{Suite, save_suites, load_suites};
+    use crate::config_manager::get_skill_config;
+    use crate::suite_manager::{Suite, load_suites, save_suites};
     use crate::suite_applier::apply_suite;
-    use crate::git_manager::core_install_skill_from_url;
 
     fn with_test_env<F>(test_name: &str, f: F)
     where
@@ -172,7 +170,7 @@ mod tests {
             };
             
             // apply_suite copies loadout skills from Hub to Project's .cursor/skills
-            let apply_res = apply_suite(project_path.to_string_lossy().to_string(), suite);
+            let apply_res = apply_suite(project_path.to_string_lossy().to_string(), suite, Some("cursor".to_string()));
             assert!(apply_res.is_ok(), "Apply suite failed: {:?}", apply_res.err());
 
             // Verify project AGENTS.md exists

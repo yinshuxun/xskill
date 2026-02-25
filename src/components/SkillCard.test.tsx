@@ -5,7 +5,7 @@ import { LocalSkill, Tool } from '@/hooks/useAppStore';
 
 // Mock Tooltip to just render children to simplify testing
 vi.mock('@/components/ui/tooltip-simple', () => ({
-  Tooltip: ({ children }: any) => <div>{children}</div>
+  Tooltip: ({ children }: { children: React.ReactNode }) => <div>{children}</div>
 }));
 
 describe('SkillCard', () => {
@@ -60,9 +60,9 @@ describe('SkillCard', () => {
 
     // Find the Configure button (Wrench icon) - it's the third button in the card
     const buttons = screen.getAllByRole('button');
-    // Button order: Copy Path, Open Folder, Configure, Collect, Sync... 
-    // Configure is at index 2 (0-based)
-    const configureButton = buttons[2];
+    // Button order: Copy Path, Open Folder, View SKILL.md, Configure, Collect, Sync... 
+    // Configure is at index 3 (0-based)
+    const configureButton = buttons[3];
     fireEvent.click(configureButton);
     expect(onConfigureMock).toHaveBeenCalledWith(mockSkill);
   });

@@ -42,13 +42,10 @@ pub fn save_suites(suites: Vec<Suite>) -> Result<(), String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::env;
-    use tempfile::TempDir;
 
     #[test]
     fn test_save_and_load_suites() {
         // Create a temporary home directory
-        let temp_dir = TempDir::new().unwrap();
         
         // IMPORTANT: Because load_suites and save_suites don't accept a path, we would need to mock crate::utils::get_home_dir().
         // However, setting the HOME environment variable does not reliably affect `crate::utils::get_home_dir()` in Rust since it caches or uses getpwuid on Unix.
