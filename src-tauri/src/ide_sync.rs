@@ -3,7 +3,6 @@ use crate::skill_manager::CENTRAL_SKILLS_DIR;
 use serde_json::Value;
 use std::fs;
 use std::path::PathBuf;
-use walkdir::WalkDir;
 
 fn tool_skills_dir(tool_key: &str) -> Option<PathBuf> {
     let home = crate::utils::get_home_dir()?;
@@ -34,37 +33,7 @@ fn tool_skills_dir(tool_key: &str) -> Option<PathBuf> {
     Some(home.join(subdir))
 }
 
-fn copy_dir_all(src: &PathBuf, dst: &PathBuf) -> Result<(), String> {
-    if dst.exists() || dst.is_symlink() {
-        fs::remove_file(dst)
-            .or_else(|_| fs::remove_dir_all(dst))
-            .map_err(|e| format!("Failed to remove existing target {}: {}", dst.display(), e))?;
-    }
-    fs::create_dir_all(dst)
-        .map_err(|e| format!("Failed to create dir {}: {}", dst.display(), e))?;
 
-    for entry in WalkDir::new(src).min_depth(1) {
-        let entry = entry.map_err(|e| format!("Walk error: {}", e))?;
-        
-        // Skip .git directories
-        if entry.path().components().any(|c| c.as_os_str() == ".git") {
-            continue;
-        }
-
-        let relative = entry.path().strip_prefix(src)
-            .map_err(|e| format!("Strip prefix error: {}", e))?;
-        let dest_path = dst.join(relative);
-
-        if entry.path().is_dir() {
-            fs::create_dir_all(&dest_path)
-                .map_err(|e| format!("Failed to create dir {}: {}", dest_path.display(), e))?;
-        } else {
-            fs::copy(entry.path(), &dest_path)
-                .map_err(|e| format!("Failed to copy {}: {}", entry.path().display(), e))?;
-        }
-    }
-    Ok(())
-}
 
 /// Create a symlink at `dst` pointing to `src`.
 /// On macOS/Linux uses `std::os::unix::fs::symlink`.
@@ -169,7 +138,7 @@ pub fn sync_skill(
                     #[cfg(not(unix))]
                     { Err("Symlink mode is only supported on macOS/Linux".to_string()) }
                 } else {
-                    copy_dir_all(&src, &dest)
+                    crate::utils::copy_dir_all(&src, &dest)
                 };
 
                 match result {
@@ -219,7 +188,7 @@ pub fn skill_collect_to_hub(skill_dir: String) -> Result<String, String> {
         }
     }
 
-    copy_dir_all(&src, &hub_dir).map_err(|e| e.to_string())?;
+    crate::utils::copy_dir_all(&src, &hub_dir).map_err(|e| e.to_string())?;
 
     Ok(hub_dir.to_string_lossy().to_string())
 }

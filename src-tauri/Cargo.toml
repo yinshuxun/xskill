@@ -38,6 +38,7 @@ security-framework = "=2.11.1"
 native-tls = "=0.2.11"
 time = "=0.3.36"
 url = "=2.5.0"
+open = "5.3.3"
 
 
 

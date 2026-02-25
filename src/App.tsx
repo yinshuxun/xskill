@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { CloudDownload, BookOpen, Plus, ScanSearch, Box, Layers, LayoutGrid } from "lucide-react";
 import { NewSkillDialog } from "@/components/NewSkillDialog";
@@ -20,6 +20,13 @@ function App() {
   const [isNewSkillModalOpen, setIsNewSkillModalOpen] = useState(false);
   const [isOnboardingModalOpen, setIsOnboardingModalOpen] = useState(false);
   const [configuringSkill, setConfiguringSkill] = useState<LocalSkill | null>(null);
+
+  useEffect(() => {
+    if (page === "hub" || page === "my-skills") {
+      refreshSkills();
+    }
+  }, [page, refreshSkills]);
+
 
   const navItems: { id: Page; label: string; icon: React.ReactNode }[] = [
     { id: "hub", label: "XSkill Hub", icon: <LayoutGrid className="mr-3 h-4 w-4 opacity-70" /> },

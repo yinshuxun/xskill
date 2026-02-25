@@ -48,6 +48,7 @@ pub fn run() {
             suite_manager::save_suites,
             suite_applier::apply_suite,
             ide_sync::skill_collect_to_hub,
+            utils::open_folder,
         ])
         .setup(|_app| {
             config::init_config();

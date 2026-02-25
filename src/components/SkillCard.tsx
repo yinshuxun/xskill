@@ -3,7 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { Card, CardHeader, CardTitle, CardDescription, CardFooter, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Wrench, RefreshCw, Link as LinkIcon, ArrowUpCircle, Trash2 } from "lucide-react";
+import { Wrench, RefreshCw, Link as LinkIcon, ArrowUpCircle, Trash2, Check, Copy, FolderOpen } from "lucide-react";
 import { Tooltip } from "@/components/ui/tooltip-simple";
 import { AgentIcons } from "@/components/ui/icons";
 import type { LocalSkill, Tool } from "@/hooks/useAppStore";
@@ -20,6 +20,21 @@ interface SkillCardProps {
 export function SkillCard({ skill, tools, syncedTools = [], onRefresh, onConfigure }: SkillCardProps) {
   const [syncing, setSyncing] = useState<string | null>(null);
   const [showSyncMenu, setShowSyncMenu] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const handleCopyPath = () => {
+    navigator.clipboard.writeText(skill.path);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleOpenFolder = async () => {
+    try {
+      await invoke("open_folder", { path: skill.path });
+    } catch (err) {
+      console.error("Failed to open folder:", err);
+    }
+  };
 
   // Determine skill tier
   let tier = "Project";
@@ -95,8 +110,22 @@ export function SkillCard({ skill, tools, syncedTools = [], onRefresh, onConfigu
             {skill.description || "No description provided."}
           </CardDescription>
           
-          <div className="text-[10px] text-muted-foreground/60 font-mono bg-muted/40 p-2 rounded-xl truncate border border-border/30" title={skill.path}>
-            {skill.path}
+          <div className="flex items-center gap-1.5 bg-muted/40 p-1.5 pr-2 rounded-xl border border-border/30 group/path">
+            <div className="text-[10px] text-muted-foreground/70 font-mono truncate flex-1 pl-1" title={skill.path}>
+              {skill.path}
+            </div>
+            <div className="flex items-center gap-1 opacity-0 group-hover/path:opacity-100 transition-opacity">
+              <Tooltip content="Copy Path">
+                <Button variant="ghost" size="icon" className="h-6 w-6 rounded-md hover:bg-background shadow-sm" onClick={handleCopyPath}>
+                  {copied ? <Check className="h-3 w-3 text-emerald-500" /> : <Copy className="h-3 w-3 text-muted-foreground" />}
+                </Button>
+              </Tooltip>
+              <Tooltip content="Open Folder">
+                <Button variant="ghost" size="icon" className="h-6 w-6 rounded-md hover:bg-background shadow-sm" onClick={handleOpenFolder}>
+                  <FolderOpen className="h-3 w-3 text-muted-foreground" />
+                </Button>
+              </Tooltip>
+            </div>
           </div>
           
           {syncedTools && syncedTools.length > 0 && (
