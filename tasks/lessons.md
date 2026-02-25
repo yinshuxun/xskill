@@ -1,73 +1,65 @@
-# 经验教训 (Lessons Learned)
+# Vibe Coding & AI 协作经验沉淀 (Lessons Learned)
 
-本文件用于记录在项目开发过程中踩过的坑，并在之后的开发会话中定期回顾，以防重蹈覆辙。
-
-## 1. Rust 编译器 `edition2024` 与 `time-core` 的依赖冲突
-
-**问题描述**:
-在初始化 `xskill` 桌面端项目并执行 `npm run tauri dev` 时，底层依赖 `tauri-plugin-log -> time -> time-core` 导致编译失败。报错信息如下：
-> `this version of Cargo is older than the 2024 edition, and only supports 2015, 2018, and 2021 editions.`
-
-这是因为：
-1. `tauri.conf.json` 或最初由 `create-vite` 生成的 `src-tauri/Cargo.toml` 中，可能锁定了 `rust-version = "1.77.2"`。
-2. 即使我们在外层环境使用了 `rustup update` 将本机的 Rust 升级到了最新的 `1.93.1`，由于这个字段的存在，Cargo 依然使用老版本逻辑。
-3. `time-core v0.1.8` 在最近发布时启用了只有在最新版 Rust 才正式支持的 `edition = "2024"` 新标准。
-
-**解决方案**:
-1. **删除 `rust-version = "1.77.2"`**：在 `Cargo.toml` 中解除对编译器的版本锁定。
-2. **强制降级 `time` 与 `time-core`**：在 `src-tauri` 目录执行 `cargo update -p time --precise 0.3.36`。这样就会拉取支持 `edition=2021` 的 `time-core v0.1.2` 版本，避免引入 `0.1.8`。
-
-**教训**:
-不要盲目执行全局 `cargo update`，特别是在大版本或 Edition 更新的交界期（比如目前的 2024 Edition 推广期），很容易把一些激进的底层库拉进来导致不兼容。遇到依赖版本过高的问题，优先考虑使用 `--precise` 降级，而不是一直去升级编译环境。
+这份文档总结了在开发 `XSkill` 项目全周期中，与 AI Agent 结对编程所沉淀的最佳实践、高频踩坑点（Bug）及其解法，以及如何利用外部 Skill 提升工程与设计质量的实战经验。
 
 ---
 
-## 2. Cargo.lock 版本 4 与老版本环境的不兼容
+## 🛠️ 一、AI 结对编程排错经验 (Bug Triage & Fixes)
 
-**问题描述**:
-在解决上述问题时，因为我们在 AI 的最新 Rust (1.93) 环境中执行了 `cargo update` 或 `cargo generate-lockfile`，Cargo 自动将 `Cargo.lock` 文件的顶部标识重写为了 `version = 4`。
-结果导致用户在其相对较老的本地终端环境（或被 `RUSTUP_TOOLCHAIN=stable` 限制为旧版本时）执行 `npm run tauri dev` 时报错：
-> `lock file version 4 was found, but this version of Cargo does not understand this lock file, perhaps Cargo needs to be updated?`
+在本项目开发中，遇到了几个 AI 经常容易忽略但极其致命的底层问题。通过与 AI 结对，我们总结了以下核心修复策略：
 
-**解决方案**:
-直接修改 `src-tauri/Cargo.lock` 文件头部，将 `version = 4` 降级改回 `version = 3`。因为 `version 3` 的语法完全兼容当前项目所需的大部分常见依赖结构。
+### 1. Tauri/Rust 跨端文件系统的高危操作
+* **Bug 场景**: 在实现 "Collect to Hub" 技能同步时，如果用户把已经在 Hub 里的软链重新拉回 Hub，触发了 `copy_dir_all` 或删除逻辑，会导致源目录被**递归自删 (Self-deletion)**，造成严重的不可逆数据丢失。
+* **AI 的盲区**: AI 往往会直白地生成 `if dst.exists() { fs::remove_dir_all(dst) }`，而忽略了文件系统的相对路径闭环或软链循环。
+* **修复经验**: 强制要求 AI 在进行任何覆盖级 IO 操作前，先调用 `fs::canonicalize(&src)` 和 `fs::canonicalize(&dst)` 获取绝对物理路径。如果两者的解析路径相同，则立即 `return Ok()` 拦截操作。
 
-**教训**:
-AI Agent 环境中的工具链版本（如 Cargo 1.93）与用户实际宿主机的环境常常存在差异。千万不要自作聪明地用 "删除并重新生成 lockfile" 来试图解决——由于 AI 环境的 Cargo 版本太高，重新生成的仍然是 v4 格式，导致用户本地依然报错。**碰到这类问题，直接把 `Cargo.lock` 头部的 4 改成 3 是最稳妥也是最有效的向下兼容方法。**
+### 2. Github Monorepo 级联目录拉取失败
+* **Bug 场景**: 用户从 Marketplace 点击导入一个 Github Skill（如 `Next.js/.claude-plugin/xxx` 子目录），原生 `git clone` 会报错因为那不是一个 Repo 的根目录。
+* **AI 的盲区**: 简单的 URL 正则拆分。当遇到带有树层级 (`/tree/main/`) 的 GitHub 链接时束手无策。
+* **修复经验**: 引导 AI 使用 **Git Sparse-checkout（稀疏检出）** 配合 `--filter=tree:0`。首先 clone 一个极度轻量的空壳目录，开启 no-cone，单独 set 子目录，然后再进行 pull/checkout。这样能在几秒内精确拔取巨大仓库中的任意一个小 Skill 文件夹。
 
----
+### 3. Tauri 前后端 IPC 变量名序列化断层
+* **Bug 场景**: 前端调用 `invoke("install_skill_from_url", { repoUrl: url })` 报错提示 missing required key `repoUrl`。
+* **AI 的盲区**: Rust 后端默认开启了警告，AI 在后端写了 `repoUrl` 但 Rust 规范是 `repo_url`。当 AI 单方面修改了 Rust 代码的命名而没有同步更新前端 TypeScript 时，Tauri 宏的自动序列化就会崩塌。
+* **修复经验**: 在解决前后端交互报错时，优先排查宏注解函数的参数名是否采用了下划线风格 (snake_case)，并确保前端 payload 字典里的 Key 精确对应。
 
-## 3. Edition 2024 带来的底层依赖问题（以 getrandom v0.4 为例）
-
-**问题描述**:
-在启动或者更新依赖后，遇到报错：
-> `failed to download getrandom v0.4.1`
-> `failed to parse the edition key`
-> `this version of Cargo is older than the 2024 edition, and only supports 2015, 2018, and 2021 editions.`
-
-**解决方案**:
-近期许多库（如 `uuid`、`getrandom`）在升级时改为了只支持 Rust 2024 版本。当你的本地 Cargo 工具链被 `RUSTUP_TOOLCHAIN=stable` 限制或者较旧时，这些库会解析失败。
-解决办法是找出引入这些新版库的上游依赖，并强制将其降级到旧版。例如将 `uuid` 降级从而避免拉取 `getrandom v0.4.1`：
-
-```bash
-# 精确降级 uuid 到 1.11.0 (最后一个不需要 getrandom v0.4.1 的版本)
-cargo update -p uuid --precise 1.11.0
-```
+### 4. 并发测试环境下的“幽灵”竞争
+* **Bug 场景**: 编写 E2E Rust 集成测试时，频繁报出 `os error 2` 找不到文件。
+* **AI 的盲区**: `cargo test` 默认是多线程并发执行的。所有的测试用例都在同时修改同一个 `XSKILL_TEST_HOME` 环境变量并疯狂读写同一个模拟沙箱，导致互相覆盖和清空。
+* **修复经验**: 在配置 CI 和 `package.json` 时，必须为全局环境变量依赖的集成测试加上 `cargo test -- --test-threads=1` 串行执行锁。
 
 ---
 
-## 4. Tauri Plugin Store v2 模块导出与 CI 构建失败
+## 🎨 二、借助云端 Skill 进行架构与审美升维
 
-**问题描述**:
-在 GitHub Actions 等 CI 环境中构建时，报错：
-> `Module '"@tauri-apps/plugin-store"' has no exported member 'load'.`
-而本地开发环境（如 v2.4.2）可能正常。
+在此项目中，我们通过引用外部的高阶提示词（Skill），极大提升了 AI 输出的代码质感和组件成熟度。
 
-这是因为 `@tauri-apps/plugin-store` 在 v2.0.0 左右的版本变动中，将顶层的 `load` 函数移除或更改了导出方式，改为推荐使用 `Store.load` 静态方法。如果 `package.json` 中使用 `~2.0.0` 且 CI 环境安装了严格的 v2.0.0 版本（可能缺少该导出），就会导致构建失败。
+### 1. 使用 `taste-skill` 突破 UI 审美瓶颈
+* **问题**: 默认的 LLM 倾向于生成具有强烈“AI 感”的 UI——紫色渐变滥用、居中对齐、默认卡片边框、生硬的页面切换。
+* **引入**: 我们使用了 `https://github.com/Leonxlnx/taste-skill` 来约束大模型的前端行为。
+* **成效**:
+  * **字体的更换**: 强制 AI 从 `Inter` 切换至高级感的 `Geist Sans`。
+  * **微动效引擎**: 引导 AI 引入并使用了 `framer-motion`。将生硬的列表替换为拥有 `spring (stiffness: 400)` 阻尼特性的平滑入场（Bento UI 级联入场）。
+  * **阴影与质感**: 使用了无边框配合大范围弥散阴影 (`shadow-[0_20px_40px_-15px_rgba(0,0,0,0.05)]`)，替代了粗糙的 `border` 描边，实现了所谓的“液态玻璃”折射感。
 
-**解决方案**:
-1. **使用标准 API**: 将 `import { load }` 改为 `import { Store }` 并使用 `await Store.load(...)`。这是 Tauri v2 的推荐用法。
-2. **放宽依赖版本**: 将 `package.json` 中的 `@tauri-apps/plugin-store` 版本从 `~2.0.0` 改为 `^2.0.0`，允许安装最新的次版本（如 v2.4.x），以获取修复和新功能。
+---
 
-**教训**:
-当遇到 CI 与本地构建不一致时，首先检查 `package.json` 的版本约束（`~` vs `^`）和 `node_modules` 的实际安装版本。对于 Tauri 插件，优先使用类静态方法（如 `Store.load`）而非顶层函数，因为顶层函数的导出在不同版本间可能不稳定。
+## 🤖 三、Vibe Coding 完整实战心法 (Meta Lessons)
+
+作为全生命周期主导者，在无需自己敲代码的前提下，把控一个中大型 Desktop App 落地的经验：
+
+1. **分离“核心逻辑”与“宿主状态”**：
+   对于 Tauri 应用，不要让 AI 把核心算法（如 `git_manager.rs`, `ide_sync.rs`）和前端弹窗事件（如 `window.emit`）紧紧绑在一起。必须强制要求 AI 拆分出一个独立的 `core_xxx` 函数，这不仅有利于防死锁，更是后续进行 Headless 集成测试（沙箱测试）的先决条件。
+   
+2. **测试先行，沙箱隔离 (TDD & Sandbox)**：
+   让 AI 开发破坏性功能（增删改本地配置目录）时，**千万不要在真实的本机开发环境里裸跑**。
+   * 第一步必须是要求 AI 实现一个能读取特定环境变量（如 `XSKILL_TEST_HOME`）的底层探测器。
+   * 把所有的破坏性操作用例隔离在 `TempDir` 临时系统文件夹里跑完。等自动化用例 100% 绿灯时，再让前端开放这个按钮。这拦截了本项目开发中至少 3 次直接导致本地应用崩溃的删库危机。
+
+3. **面对 UI/UX 不要说“不好看”，要提供具体的设计体系**：
+   AI 对“美丑”没有概念，对“规范”却极其敏感。通过直接引入 `tailwind.css v4` 的高阶规范库或者开源设计 Skill（如 Taste Skill），把抽象的“想要高级感”转化为具体的 CSS 指令（如使用特定的阴影参数、特定的透明度），产出的界面就能从 Demo 级飞跃到商用级。
+
+4. **全局思维：跨端调用的兜底机制**：
+   当 AI 构建“去别的文件夹读文件”这类功能时，永远要问 AI 两个问题：
+   * “如果目标目录包含隐藏文件（以 `.` 开头）或者多层软链，你的代码会不会死循环？”
+   * “如果请求远端数据（如 reqwest 请求 Github），弱网环境下这个请求会不会永远挂起，阻塞掉整个 Tauri 后端进程？”（由此引入了全局超时控制和环路检测）。
