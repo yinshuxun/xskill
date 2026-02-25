@@ -71,7 +71,7 @@ export function SkillCard({ skill, tools, syncedTools = [], onRefresh, onConfigu
     if (!confirm(`Are you sure you want to delete "${skill.name}"?\nThis action cannot be undone.`)) return;
     
     try {
-      await invoke("delete_skill", { skillPath: skill.path });
+      await invoke("delete_skill", { path: skill.path });
       onRefresh();
     } catch (err) {
       alert(`Delete failed: ${err}`);
@@ -80,7 +80,7 @@ export function SkillCard({ skill, tools, syncedTools = [], onRefresh, onConfigu
 
   const handleCollect = async () => {
     try {
-      await invoke("skill_collect_to_hub", { skillPath: skill.path });
+      await invoke("skill_collect_to_hub", { skillDir: skill.path });
       onRefresh();
     } catch (err) {
       alert(`Collect failed: ${err}`);
