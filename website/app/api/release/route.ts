@@ -21,20 +21,21 @@ export async function GET() {
     });
 
     if (!res.ok) {
-      console.error(`GitHub API error: ${res.status} ${res.statusText}`);
-      return NextResponse.json({ error: 'Failed to fetch release info' }, { status: res.status });
+      console.error('GitHub API error:', await res.text());
+      return NextResponse.json({ error: 'GitHub API error' }, { status: res.status });
     }
 
     const release = await res.json();
     
-    // Return minimal data to avoid leaking too much info if needed, but for now full object is fine
-    // The client only needs tag_name and assets
+    if (!release || !release.assets) {
+       console.error('Invalid release data:', release);
+       return NextResponse.json({ error: 'Invalid release data' }, { status: 500 });
+    }
+
     return NextResponse.json({
       tag_name: release.tag_name,
-      assets: release.assets.map((a: any) => ({
+      assets: release.assets.map((a: { name: string }) => ({
         name: a.name,
-        // We don't return browser_download_url because it requires auth for private repos
-        // The client should use our /api/download endpoint
         browser_download_url: '/api/download', 
       })),
     });

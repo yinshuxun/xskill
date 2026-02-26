@@ -10,6 +10,7 @@ import { SuitesPage } from "@/components/SuitesPage";
 import { HubPage } from "@/components/HubPage";
 import { MySkillsPage } from "@/components/MySkillsPage";
 import { motion } from "framer-motion";
+import packageJson from "../package.json";
 
 type Page = "hub" | "my-skills" | "marketplace" | "projects" | "suites";
 
@@ -85,7 +86,7 @@ function App() {
         </div>
         
         <div className="p-6 border-t border-border/30 text-[11px] font-medium text-muted-foreground/80 flex justify-between items-center bg-muted/10">
-          <span className="tracking-wide">v0.3.1</span>
+          <span className="tracking-wide">v{packageJson.version}</span>
           <div className="flex items-center gap-2">
             <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
             <span>System Active</span>

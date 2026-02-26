@@ -1,0 +1,26 @@
+[
+  {
+    "id": "1",
+    "name": "react-perf-audit",
+    "author": "xskill",
+    "authorAvatar": "https://avatars.githubusercontent.com/u/123456?v=4",
+    "description": "A skill to audit React application performance using Lighthouse and React Profiler.",
+    "githubUrl": "https://github.com/xskill/react-perf-audit",
+    "stars": 120,
+    "forks": 15,
+    "updatedAt": 1700000000,
+    "tags": ["react", "performance"]
+  },
+  {
+    "id": "2",
+    "name": "node-express-scaffold",
+    "author": "xskill",
+    "authorAvatar": "https://avatars.githubusercontent.com/u/123456?v=4",
+    "description": "Quickly scaffold a Node.js Express API with TypeScript and best practices.",
+    "githubUrl": "https://github.com/xskill/node-express-scaffold",
+    "stars": 85,
+    "forks": 8,
+    "updatedAt": 1700000000,
+    "tags": ["node", "express"]
+  }
+]
