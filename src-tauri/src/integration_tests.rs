@@ -40,6 +40,9 @@ mod tests {
                 description.clone(),
                 "xskill".to_string(), // central hub
                 content.clone(),
+                None,
+                None,
+                None,
             );
             assert!(result.is_ok(), "Skill creation failed: {:?}", result.err());
             let created_path_str = result.unwrap();
