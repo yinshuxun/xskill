@@ -1,73 +1,55 @@
-# React + TypeScript + Vite
+# XSkill - The Skill Manager for AI Coding Agents
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+> **Power up your Vibe Coding experience with local Skill management.**
 
-Currently, two official plugins are available:
+XSkill is a lightweight, privacy-focused desktop application for macOS that helps you manage, discover, and synchronize **MCP (Model Context Protocol)** skills for your favorite AI coding agents (Cursor, Windsurf, Claude Code, OpenCode, etc.).
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## 🚀 Why XSkill?
 
-## React Compiler
+In the era of **Vibe Coding**, your AI's capability is defined by the tools (Skills) it can use.
+XSkill bridges the gap between scattered online skills and your local development environment.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- **🔒 Privacy First**: All your custom skills and configurations are stored locally. No third-party servers involved.
+- **⚡️ One-Click Sync**: Instantly synchronize your skill library to **Cursor**, **Windsurf**, **Claude Code**, and **OpenCode** configuration files.
+- **📦 Unified Hub**: Manage all your skills (both downloaded and self-created) in one clean interface.
+- **🛠 Powerful CLI**: Automate your workflow with the built-in command-line tool.
 
-## Expanding the ESLint configuration
+## 📥 Installation
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+Download the latest version from our [Releases](https://github.com/buzhangsan/xskill/releases) page.
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+Currently supported on **macOS** (Universal Binary for Intel & Apple Silicon).
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+## 💻 CLI Usage
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+XSkill comes with a powerful CLI to help you automate skill management.
+
+### Setup
+Add the binary to your PATH or create a symlink:
+```bash
+sudo ln -s /Applications/XSkill.app/Contents/MacOS/xskill /usr/local/bin/xskill
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
-
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+### Sync Skills
+Synchronize all enabled skills to all supported agents:
+```bash
+xskill sync --all
 ```
+
+### Create New Skill
+Generate a new skill with best-practice scaffolding:
+```bash
+xskill create --name <my-new-skill>
+```
+
+## 🔮 Vision
+
+Our goal is to build the "Homebrew" or "App Store" for AI Skills.
+- [x] **Local Management**: Enable/Disable skills with a toggle.
+- [x] **Agent Sync**: Auto-detect and configure local IDEs.
+- [ ] **Skill Marketplace**: Built-in browser for public MCP skills.
+- [ ] **AI Recommendations**: Smart skill suggestions based on your task.
+
+## 📄 License
+
+MIT License.
