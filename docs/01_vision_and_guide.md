@@ -36,3 +36,11 @@
 - [x] **全网聚合爬虫**：内置爬虫引擎，自动从 skillsmp.com、GitHub 等主流平台抓取最新、最热的公共 Skills，在本地形成你的私人技能库。
 - [x] **AI 智能推荐与搜索**：接入本地大模型（如 Ollama）或云端 API，当你输入“我想处理 Excel”时，AI 自动为你搜索并推荐最合适的本地或线上 Skill。
 - [x] **开箱即用的快捷创建**：提供脚手架模板，让你在 1 分钟内用 TypeScript 或 Python 初始化一个全新的自定义 Skill。
+
+---
+
+## 4. 强大的 CLI 支持
+
+除了 GUI，我们还提供了强大的命令行工具，支持自动化同步和脚本化操作。你可以使用 `xskill sync --all` 一键同步所有技能，或者使用 `xskill create --name <name>` 快速创建新技能。
+
+详细使用说明请参考 [CLI Guide](./CLI.md)。

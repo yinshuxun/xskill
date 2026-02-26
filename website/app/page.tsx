@@ -1,12 +1,13 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
-import { motion, useScroll, useTransform, AnimatePresence } from 'framer-motion';
+import { useState, useEffect, useId } from 'react';
+import { motion, useScroll, useTransform } from 'framer-motion';
 import { Download, ArrowRight, Check, ChevronRight } from 'lucide-react';
 
 // ─── App Icon SVG (matches exactly the real xskill app icon) ────────────────
 function AppIcon({ size = 48, className = '' }: { size?: number; className?: string }) {
-  const id = useRef(`g-${Math.random().toString(36).slice(2)}`).current;
+  const rawId = useId();
+  const id = `gradient-${rawId.replace(/:/g, '')}`;
   return (
     <svg
       width={size}
@@ -79,12 +80,8 @@ interface Release {
 
 async function fetchRelease(): Promise<Release | null> {
   try {
-    const owner = process.env.NEXT_PUBLIC_GITHUB_OWNER || 'mgechev';
-    const repo = process.env.NEXT_PUBLIC_GITHUB_REPO || 'xskill';
-    const res = await fetch(`https://api.github.com/repos/${owner}/${repo}/releases/latest`, {
-      headers: { Accept: 'application/vnd.github+json' },
-      next: { revalidate: 3600 },
-    });
+    // Use internal API to fetch release info (handles private repo auth)
+    const res = await fetch('/api/release');
     if (!res.ok) return null;
     return res.json();
   } catch { return null; }
