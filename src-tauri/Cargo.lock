@@ -5245,7 +5245,7 @@ dependencies = [
 
 [[package]]
 name = "xskill"
-version = "0.3.6"
+version = "0.3.7"
 dependencies = [
  "dirs",
  "log",
