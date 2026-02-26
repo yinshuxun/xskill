@@ -174,7 +174,17 @@ export default function Home() {
               </a>
             ))}
             <a
-              href={dmgAsset?.browser_download_url ?? '#'}
+              href="https://github.com/yinshuxun/xskill"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm text-zinc-400 hover:text-white transition-colors duration-200"
+            >
+              GitHub
+            </a>
+            <a
+              href="https://github.com/yinshuxun/xskill/releases"
+              target="_blank"
+              rel="noopener noreferrer"
               className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-sm font-medium hover:bg-emerald-500/20 transition-all"
             >
               <Download className="w-3.5 h-3.5" />

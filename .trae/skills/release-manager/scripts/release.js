@@ -52,6 +52,14 @@ let mainRs = fs.readFileSync(mainRsPath, 'utf8');
 mainRs = mainRs.replace(/#\[command\(version = ".*"\)\]/, `#[command(version = "${newVersion}")]`);
 fs.writeFileSync(mainRsPath, mainRs);
 
+// Update lockfiles
+try {
+  run('npm install --package-lock-only');
+  run('cd src-tauri && cargo check');
+} catch (e) {
+  console.warn('Failed to update lockfiles:', e.message);
+}
+
 // Git operations
 try {
   run('git add .');
