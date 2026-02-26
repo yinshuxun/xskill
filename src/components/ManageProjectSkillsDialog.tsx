@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, Trash2, FolderOpen } from "lucide-react";
+import { RefreshCw, Trash2, FolderOpen, Import } from "lucide-react";
 import type { Project, LocalSkill } from "@/hooks/useAppStore";
 
 interface ManageProjectSkillsDialogProps {
@@ -15,6 +15,7 @@ export function ManageProjectSkillsDialog({ isOpen, onClose, project }: ManagePr
   const [skills, setSkills] = useState<LocalSkill[]>([]);
   const [loading, setLoading] = useState(false);
   const [deletingPath, setDeletingPath] = useState<string | null>(null);
+  const [importingPath, setImportingPath] = useState<string | null>(null);
 
   const loadSkills = async () => {
     if (!project) return;
@@ -48,6 +49,18 @@ export function ManageProjectSkillsDialog({ isOpen, onClose, project }: ManagePr
       alert(`Delete failed: ${err}`);
     } finally {
       setDeletingPath(null);
+    }
+  };
+
+  const handleImport = async (skill: LocalSkill) => {
+    setImportingPath(skill.path);
+    try {
+      await invoke("skill_collect_to_hub", { skillDir: skill.path });
+      alert(`✅ Skill "${skill.name}" imported to Hub successfully!`);
+    } catch (err) {
+      alert(`❌ Import failed: ${err}`);
+    } finally {
+      setImportingPath(null);
     }
   };
 
@@ -108,19 +121,35 @@ export function ManageProjectSkillsDialog({ isOpen, onClose, project }: ManagePr
                                     </div>
                                 )}
                             </div>
-                            <Button 
-                                variant="ghost" 
-                                size="icon" 
-                                className="text-muted-foreground hover:text-destructive shrink-0"
-                                onClick={() => handleDelete(skill.path)}
-                                disabled={!!deletingPath}
-                            >
-                                {deletingPath === skill.path ? (
-                                    <RefreshCw className="h-4 w-4 animate-spin" />
-                                ) : (
-                                    <Trash2 className="h-4 w-4" />
-                                )}
-                            </Button>
+                            <div className="flex items-center gap-1">
+                                <Button 
+                                    variant="ghost" 
+                                    size="icon" 
+                                    className="text-muted-foreground hover:text-primary shrink-0"
+                                    onClick={() => handleImport(skill)}
+                                    disabled={!!importingPath}
+                                    title="Import to Hub"
+                                >
+                                    {importingPath === skill.path ? (
+                                        <RefreshCw className="h-4 w-4 animate-spin" />
+                                    ) : (
+                                        <Import className="h-4 w-4" />
+                                    )}
+                                </Button>
+                                <Button 
+                                    variant="ghost" 
+                                    size="icon" 
+                                    className="text-muted-foreground hover:text-destructive shrink-0"
+                                    onClick={() => handleDelete(skill.path)}
+                                    disabled={!!deletingPath}
+                                >
+                                    {deletingPath === skill.path ? (
+                                        <RefreshCw className="h-4 w-4 animate-spin" />
+                                    ) : (
+                                        <Trash2 className="h-4 w-4" />
+                                    )}
+                                </Button>
+                            </div>
                         </div>
                       ))}
                     </div>

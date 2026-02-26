@@ -20,7 +20,7 @@ interface SkillCardProps {
 
 export function SkillCard({ skill, tools, syncedTools = [], onRefresh, onConfigure }: SkillCardProps) {
   const [syncing, setSyncing] = useState<string | null>(null);
-  const [showSyncMenu, setShowSyncMenu] = useState(false);
+  const [showSyncDialog, setShowSyncDialog] = useState(false);
   const [copied, setCopied] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
 
@@ -60,7 +60,6 @@ export function SkillCard({ skill, tools, syncedTools = [], onRefresh, onConfigu
         targetToolKeys: [targetKey],
         mode,
       });
-      setShowSyncMenu(false);
       onRefresh();
     } catch (err) {
       alert(`Sync failed: ${err}`);
@@ -171,49 +170,11 @@ export function SkillCard({ skill, tools, syncedTools = [], onRefresh, onConfigu
                   variant="secondary" 
                   size="sm" 
                   className="h-9 px-3 rounded-xl text-xs font-medium bg-background border border-border/50 text-foreground hover:text-primary hover:border-primary/30 hover:bg-primary/5 shadow-sm transition-all active:scale-[0.97]"
-                  onClick={() => setShowSyncMenu(!showSyncMenu)}
+                  onClick={() => setShowSyncDialog(true)}
                 >
                   <RefreshCw className="mr-2 h-3.5 w-3.5" /> Sync
                 </Button>
               </Tooltip>
-              
-              {showSyncMenu && installedTools.length > 0 && (
-                <div className="absolute right-0 bottom-full mb-3 z-50 bg-popover/95 backdrop-blur-xl border border-border/50 rounded-2xl shadow-[0_20px_40px_-15px_rgba(0,0,0,0.1)] w-[340px] overflow-hidden animate-in fade-in slide-in-from-bottom-2">
-                  <div className="px-5 py-3.5 border-b border-border/30 bg-muted/20 flex items-center justify-between">
-                    <span className="text-xs font-semibold text-foreground/80 uppercase tracking-wider">Sync to Agent</span>
-                    <Badge variant="secondary" className="text-[10px] h-5 rounded-full font-medium text-muted-foreground bg-background">
-                      {installedTools.length} Active
-                    </Badge>
-                  </div>
-                  <div className="p-2 grid grid-cols-1 gap-1 max-h-[320px] overflow-y-auto">
-                    {installedTools.map((t) => {
-                      const Icon = AgentIcons[t.key] || AgentIcons.cursor;
-                      return (
-                        <div key={t.key} className="flex items-center justify-between px-3 py-2.5 hover:bg-accent/50 rounded-xl group/item transition-all border border-transparent hover:border-border/30">
-                          <div className="flex items-center gap-3 min-w-0">
-                            <div className="h-9 w-9 rounded-lg bg-background border border-border/50 flex items-center justify-center shrink-0 shadow-sm group-hover/item:border-primary/20 group-hover/item:shadow-md transition-all">
-                              <Icon className="h-4.5 w-4.5 text-muted-foreground group-hover/item:text-primary transition-colors" />
-                            </div>
-                            <span className="text-sm text-foreground/90 truncate font-medium tracking-tight" title={t.display_name}>{t.display_name}</span>
-                          </div>
-                          <div className="flex gap-1 opacity-60 group-hover/item:opacity-100 transition-opacity shrink-0">
-                            <Tooltip content="Copy Skill (Standard)" side="left">
-                              <Button size="icon" variant="ghost" className="h-8 w-8 rounded-lg hover:bg-primary/10 hover:text-primary active:scale-95" disabled={syncing === `${t.key}-copy`} onClick={() => handleSync(t.key, "copy")}>
-                                <RefreshCw className={`h-3.5 w-3.5 ${syncing === `${t.key}-copy` ? "animate-spin" : ""}`} />
-                              </Button>
-                            </Tooltip>
-                            <Tooltip content="Link Skill (Live Update)" side="left">
-                              <Button size="icon" variant="ghost" className="h-8 w-8 rounded-lg hover:bg-blue-500/10 hover:text-blue-600 active:scale-95" disabled={syncing === `${t.key}-link`} onClick={() => handleSync(t.key, "link")}>
-                                <LinkIcon className="h-3.5 w-3.5" />
-                              </Button>
-                            </Tooltip>
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                </div>
-              )}
             </div>
             
             <Tooltip content="Delete Skill">
@@ -226,8 +187,51 @@ export function SkillCard({ skill, tools, syncedTools = [], onRefresh, onConfigu
       </Card>
     </motion.div>
 
+    <Dialog open={showSyncDialog} onOpenChange={setShowSyncDialog}>
+      <DialogContent className="sm:max-w-[400px]">
+        <DialogHeader>
+          <DialogTitle>Sync to Agent</DialogTitle>
+        </DialogHeader>
+        <div className="px-1 py-2">
+            <div className="flex items-center justify-between px-2 mb-2">
+                <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Available Agents</span>
+                <Badge variant="secondary" className="text-[10px] h-5 rounded-full font-medium text-muted-foreground bg-muted/50">
+                    {installedTools.length} Active
+                </Badge>
+            </div>
+            <div className="grid gap-1 max-h-[400px] overflow-y-auto">
+                {installedTools.map((t) => {
+                    const Icon = AgentIcons[t.key] || AgentIcons.cursor;
+                    return (
+                    <div key={t.key} className="flex items-center justify-between px-3 py-2.5 hover:bg-accent/50 rounded-xl group/item transition-all border border-transparent hover:border-border/30">
+                        <div className="flex items-center gap-3 min-w-0">
+                        <div className="h-9 w-9 rounded-lg bg-background border border-border/50 flex items-center justify-center shrink-0 shadow-sm group-hover/item:border-primary/20 group-hover/item:shadow-md transition-all">
+                            <Icon className="h-4.5 w-4.5 text-muted-foreground group-hover/item:text-primary transition-colors" />
+                        </div>
+                        <span className="text-sm text-foreground/90 truncate font-medium tracking-tight" title={t.display_name}>{t.display_name}</span>
+                        </div>
+                        <div className="flex gap-1 opacity-60 group-hover/item:opacity-100 transition-opacity shrink-0">
+                        <Tooltip content="Copy Skill (Standard)" side="left">
+                            <Button size="icon" variant="ghost" className="h-8 w-8 rounded-lg hover:bg-primary/10 hover:text-primary active:scale-95" disabled={syncing === `${t.key}-copy`} onClick={() => handleSync(t.key, "copy")}>
+                            <RefreshCw className={`h-3.5 w-3.5 ${syncing === `${t.key}-copy` ? "animate-spin" : ""}`} />
+                            </Button>
+                        </Tooltip>
+                        <Tooltip content="Link Skill (Live Update)" side="left">
+                            <Button size="icon" variant="ghost" className="h-8 w-8 rounded-lg hover:bg-blue-500/10 hover:text-blue-600 active:scale-95" disabled={syncing === `${t.key}-link`} onClick={() => handleSync(t.key, "link")}>
+                            <LinkIcon className="h-3.5 w-3.5" />
+                            </Button>
+                        </Tooltip>
+                        </div>
+                    </div>
+                    )
+                })}
+            </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+
     <Dialog open={showPreview} onOpenChange={setShowPreview}>
-      <DialogContent className="max-w-7xl w-full h-[85vh] flex flex-col p-0 overflow-hidden">
+      <DialogContent className="max-w-[66vw] w-full h-[85vh] flex flex-col p-0 overflow-hidden">
         <DialogHeader className="px-6 py-4 border-b shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <FileText className="h-5 w-5 text-muted-foreground" />
@@ -254,7 +258,7 @@ export function SkillCard({ skill, tools, syncedTools = [], onRefresh, onConfigu
             </div>
           </div>
           
-          <div className="flex-1 flex flex-col min-h-0 border rounded-xl overflow-hidden shadow-sm bg-card">
+          <div className="flex-1 flex flex-col min-h-[300px] border rounded-xl overflow-hidden shadow-sm bg-card">
             <div className="px-4 py-3 border-b bg-muted/30 flex items-center justify-between shrink-0">
               <span className="text-xs font-medium text-muted-foreground flex items-center gap-2">
                 <FileText className="h-3.5 w-3.5" />

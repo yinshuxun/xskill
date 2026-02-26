@@ -118,9 +118,16 @@ const SkillCell = ({ columnIndex, rowIndex, style, data }: { columnIndex: number
 
 export function MarketplacePage() {
   const { skills: localSkills, refreshSkills } = useAppStore();
-  // Initialize with empty array to force loading state on first mount
-  const [skills, setSkills] = useState<MarketplaceSkill[]>([]);
-  const [loading, setLoading] = useState(true);
+  // Initialize from cache if available to prevent flash of loading state
+  const [skills, setSkills] = useState<MarketplaceSkill[]>(() => {
+    try {
+        const cached = localStorage.getItem("marketplace_cache");
+        return cached ? JSON.parse(cached) : [];
+    } catch {
+        return [];
+    }
+  });
+  const [loading, setLoading] = useState(skills.length === 0);
   const [error, setError] = useState<string | null>(null);
   const [installingId, setInstallingId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
