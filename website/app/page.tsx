@@ -5,17 +5,14 @@ import { motion } from 'framer-motion';
 import { 
   Download, 
   Sparkles, 
-  Zap, 
-  Shield, 
   FolderSync, 
   Search,
-  Settings,
   ArrowRight,
-  Github,
   Apple,
   Check,
   Terminal,
-  Package
+  Package,
+  ExternalLink
 } from 'lucide-react';
 
 // Feature data
@@ -36,17 +33,17 @@ const features = [
     description: 'Get intelligent skill suggestions based on your workflow using local Ollama or cloud APIs.',
   },
   {
-    icon: Shield,
+    icon: Terminal,
     title: 'Private & Secure',
     description: 'All data stays local on your Mac. Create private skills for your company without leaks.',
   },
   {
-    icon: Terminal,
+    icon: Package,
     title: 'Quick Scaffold',
     description: 'Initialize new skills in seconds with TypeScript or Python templates.',
   },
   {
-    icon: Package,
+    icon: Search,
     title: 'Hub Collection',
     description: 'Build your personal skill library in the central hub, sync anywhere.',
   },
@@ -76,14 +73,38 @@ interface Release {
   }>;
 }
 
+// GitHub API configuration - set via environment variables in Vercel
+const GITHUB_OWNER = process.env.NEXT_PUBLIC_GITHUB_OWNER || 'mgechev';
+const GITHUB_REPO = process.env.NEXT_PUBLIC_GITHUB_REPO || 'xskill';
+const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
+
 async function getLatestRelease(): Promise<Release | null> {
   try {
-    const response = await fetch('https://api.github.com/repos/mgechev/xskill/releases/latest', {
-      next: { revalidate: 3600 },
-    });
-    if (!response.ok) return null;
+    const headers: Record<string, string> = {
+      'Accept': 'application/vnd.github+json',
+    };
+    
+    // Add token for private repositories
+    if (GITHUB_TOKEN) {
+      headers['Authorization'] = `Bearer ${GITHUB_TOKEN}`;
+    }
+    
+    const response = await fetch(
+      `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/releases/latest`,
+      {
+        headers,
+        next: { revalidate: 3600 }, // Cache for 1 hour
+      }
+    );
+    
+    if (!response.ok) {
+      console.error('Failed to fetch release:', response.status, response.statusText);
+      return null;
+    }
+    
     return await response.json();
-  } catch {
+  } catch (error) {
+    console.error('Error fetching release:', error);
     return null;
   }
 }
@@ -173,21 +194,11 @@ export default function Home() {
                   {release ? release.tag_name.replace('v', '') : 'Latest'}
                 </span>
               </a>
-              
-              <a
-                href="https://github.com/mgechev/xskill"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2 px-8 py-4 bg-white text-slate-700 rounded-2xl font-semibold text-lg border border-slate-200 hover:border-slate-300 hover:bg-slate-50 transition-all"
-              >
-                <Github className="w-5 h-5" />
-                View on GitHub
-              </a>
             </div>
 
             {!loading && !dmgUrl && (
               <p className="mt-4 text-sm text-slate-500">
-                No release available yet. Check GitHub for latest builds.
+                No release available yet. Please check back later.
               </p>
             )}
           </motion.div>
@@ -322,7 +333,7 @@ export default function Home() {
               Download xskill today and start building your personal skill library.
             </p>
             <a
-              href={dmgUrl || 'https://github.com/mgechev/xskill'}
+              href={dmgUrl || '#download'}
               className="inline-flex items-center gap-3 px-8 py-4 bg-white text-slate-900 rounded-2xl font-semibold text-lg hover:bg-slate-100 transition-all"
             >
               <Download className="w-5 h-5" />
@@ -341,18 +352,6 @@ export default function Home() {
               <Sparkles className="w-4 h-4 text-white" />
             </div>
             <span className="font-semibold text-slate-900">xskill</span>
-          </div>
-          
-          <div className="flex items-center gap-6 text-sm text-slate-500">
-            <a href="https://github.com/mgechev/xskill" className="hover:text-slate-900 transition-colors">
-              GitHub
-            </a>
-            <a href="#" className="hover:text-slate-900 transition-colors">
-              Documentation
-            </a>
-            <a href="#" className="hover:text-slate-900 transition-colors">
-              License
-            </a>
           </div>
           
           <p className="text-sm text-slate-400">
