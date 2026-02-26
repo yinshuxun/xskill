@@ -19,10 +19,15 @@ const pkg = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
 const currentVersion = pkg.version;
 console.log(`Current version: ${currentVersion}`);
 
-// Increment patch version
-const parts = currentVersion.split('.').map(Number);
-parts[2]++;
-const newVersion = parts.join('.');
+// Increment patch version or use provided argument
+let newVersion;
+if (process.argv[2]) {
+  newVersion = process.argv[2];
+} else {
+  const parts = currentVersion.split('.').map(Number);
+  parts[2]++;
+  newVersion = parts.join('.');
+}
 console.log(`New version: ${newVersion}`);
 
 // Update package.json

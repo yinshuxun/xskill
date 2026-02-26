@@ -6,7 +6,7 @@ use xskill_lib::{ide_sync, scaffold, skill_manager};
 
 #[derive(Parser)]
 #[command(name = "xskill")]
-#[command(version = "0.4.4")]
+#[command(version = "0.5.0")]
 #[command(about = "XSkill CLI", long_about = None)]
 struct Cli {
     #[command(subcommand)]
