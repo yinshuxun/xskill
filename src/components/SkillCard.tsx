@@ -4,7 +4,6 @@ import { Card, CardHeader, CardTitle, CardDescription, CardFooter, CardContent }
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Wrench, RefreshCw, Link as LinkIcon, ArrowUpCircle, Trash2, Check, Copy, FolderOpen, Eye, FileText } from "lucide-react";
 import { Tooltip } from "@/components/ui/tooltip-simple";
 import { AgentIcons } from "@/components/ui/icons";
@@ -263,7 +262,7 @@ export function SkillCard({ skill, tools, syncedTools = [], onRefresh, onConfigu
               </span>
               <Badge variant="secondary" className="text-[10px] h-5 px-2">Markdown</Badge>
             </div>
-            <ScrollArea className="flex-1 bg-zinc-50/50 dark:bg-zinc-950/50">
+            <div className="flex-1 overflow-y-auto bg-zinc-50/50 dark:bg-zinc-950/50 scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent">
               <div className="p-6">
                 {skill.content ? (
                   <pre className="text-sm font-mono whitespace-pre-wrap leading-relaxed text-foreground/80 selection:bg-primary/20 selection:text-primary">
@@ -276,7 +275,7 @@ export function SkillCard({ skill, tools, syncedTools = [], onRefresh, onConfigu
                   </div>
                 )}
               </div>
-            </ScrollArea>
+            </div>
           </div>
         </div>
       </DialogContent>

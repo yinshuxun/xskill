@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useDeferredValue, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardFooter, CardContent } from "@/components/ui/card";
@@ -8,7 +8,6 @@ import { Input } from "@/components/ui/input";
 import { FixedSizeGrid as Grid } from "react-window";
 import AutoSizer from "react-virtualized-auto-sizer";
 import { useAppStore } from "@/hooks/useAppStore";
-import { motion } from "framer-motion";
 
 interface MarketplaceSkill {
   id: string;
@@ -53,11 +52,7 @@ const SkillCell = ({ columnIndex, rowIndex, style, data }: { columnIndex: number
 
   return (
     <div style={cellStyle}>
-      <motion.div
-        whileHover={{ y: -4, scale: 1.01 }}
-        transition={{ type: "spring" as const, stiffness: 400, damping: 30 }}
-        className="h-full"
-      >
+      <div className="h-full transition-transform duration-300 hover:-translate-y-1 hover:scale-[1.01]">
         <Card className="flex flex-col h-full bg-card shadow-[0_20px_40px_-15px_rgba(0,0,0,0.05)] hover:shadow-[0_30px_60px_-15px_rgba(0,0,0,0.08)] transition-all duration-300 rounded-3xl border-border/50 overflow-hidden">
           <CardHeader className="pb-3 px-6 pt-6 shrink-0 space-y-2">
             <div className="flex justify-between items-start gap-3">
@@ -116,19 +111,20 @@ const SkillCell = ({ columnIndex, rowIndex, style, data }: { columnIndex: number
             </div>
           </CardFooter>
         </Card>
-      </motion.div>
+      </div>
     </div>
   );
 };
 
 export function MarketplacePage() {
   const { skills: localSkills, refreshSkills } = useAppStore();
+  // Initialize with empty array to force loading state on first mount
   const [skills, setSkills] = useState<MarketplaceSkill[]>([]);
-  const [filteredSkills, setFilteredSkills] = useState<MarketplaceSkill[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [installingId, setInstallingId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const deferredQuery = useDeferredValue(searchQuery);
 
   const installedSkillNames = useMemo(() => {
     const names = new Set<string>();
@@ -140,29 +136,23 @@ export function MarketplacePage() {
     return names;
   }, [localSkills]);
 
+  const filteredSkills = useMemo(() => {
+    const query = deferredQuery.toLowerCase();
+    return skills.filter(
+      (skill) =>
+        skill.name.toLowerCase().includes(query) ||
+        skill.description.toLowerCase().includes(query) ||
+        skill.author.toLowerCase().includes(query)
+    );
+  }, [deferredQuery, skills]);
+
   const fetchMarketplace = async (isManualEvent?: React.MouseEvent) => {
-    const isManual = !!isManualEvent;
-    
-    // Try to load from cache first if not manual refresh
-    let cachedData = null;
-    if (!isManual) {
-        const cached = localStorage.getItem("marketplace_cache");
-        if (cached) {
-            try {
-                cachedData = JSON.parse(cached);
-                if (Array.isArray(cachedData)) {
-                    setSkills(cachedData);
-                    setFilteredSkills(cachedData);
-                }
-            } catch (e) {
-                console.error("Failed to parse marketplace cache", e);
-            }
-        }
+    // Only show loading if we don't have data yet or if it's a manual refresh
+    if (skills.length === 0 || isManualEvent) {
+      setLoading(true);
     }
- 
-     setLoading(true);
- 
-     setError(null);
+
+    setError(null);
     try {
       let data;
       try {
@@ -176,7 +166,6 @@ export function MarketplacePage() {
 
       if (Array.isArray(data)) {
         setSkills(data);
-        setFilteredSkills(data);
         localStorage.setItem("marketplace_cache", JSON.stringify(data));
       } else {
         if (skills.length === 0) {
@@ -195,17 +184,6 @@ export function MarketplacePage() {
   useEffect(() => {
     fetchMarketplace();
   }, []);
-
-  useEffect(() => {
-    const query = searchQuery.toLowerCase();
-    const filtered = skills.filter(
-      (skill) =>
-        skill.name.toLowerCase().includes(query) ||
-        skill.description.toLowerCase().includes(query) ||
-        skill.author.toLowerCase().includes(query)
-    );
-    setFilteredSkills(filtered);
-  }, [searchQuery, skills]);
 
   const handleInstall = async (skill: MarketplaceSkill) => {
     setInstallingId(skill.githubUrl);
@@ -230,6 +208,29 @@ export function MarketplacePage() {
     onInstall: handleInstall,
     installedSkills: installedSkillNames
   }), [filteredSkills, installingId, installedSkillNames]);
+
+  const renderGrid = useCallback(({ height, width }: { height: number; width: number }) => {
+    const columnCount = Math.floor(width / 320) || 1;
+    const columnWidth = width / columnCount;
+    const rowCount = Math.ceil(filteredSkills.length / columnCount);
+    
+    const currentItemData = { ...itemData, columnCount };
+
+    return (
+        <Grid
+            columnCount={columnCount}
+            columnWidth={columnWidth}
+            height={height}
+            rowCount={rowCount}
+            rowHeight={ROW_HEIGHT}
+            width={width}
+            itemData={currentItemData}
+            className="overflow-x-hidden"
+        >
+            {SkillCell}
+        </Grid>
+    );
+  }, [filteredSkills.length, itemData]);
 
   return (
     <div className="flex flex-col h-full space-y-6">
@@ -272,43 +273,20 @@ export function MarketplacePage() {
       )}
 
       {!error && skills.length > 0 && filteredSkills.length === 0 && (
-        <motion.div 
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="py-24 text-center text-muted-foreground/60 border border-dashed border-border/50 rounded-3xl bg-background/30"
+        <div 
+          className="py-24 text-center text-muted-foreground/60 border border-dashed border-border/50 rounded-3xl bg-background/30 mt-10"
         >
           <div className="h-16 w-16 mx-auto bg-muted/50 rounded-2xl flex items-center justify-center mb-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]">
             <CloudDownload className="h-8 w-8 opacity-50" />
           </div>
           <p className="text-base font-medium text-foreground/80">No skills found matching search.</p>
-        </motion.div>
+        </div>
       )}
 
       {!error && filteredSkills.length > 0 && (
         <div className="h-full">
             <AutoSizer>
-                {({ height, width }: { height: number; width: number }) => {
-                    const columnCount = Math.floor(width / 320) || 1;
-                    const columnWidth = width / columnCount;
-                    const rowCount = Math.ceil(filteredSkills.length / columnCount);
-                    
-                    const currentItemData = { ...itemData, columnCount };
-
-                    return (
-                        <Grid
-                            columnCount={columnCount}
-                            columnWidth={columnWidth}
-                            height={height}
-                            rowCount={rowCount}
-                            rowHeight={ROW_HEIGHT}
-                            width={width}
-                            itemData={currentItemData}
-                            className="overflow-x-hidden"
-                        >
-                            {SkillCell}
-                        </Grid>
-                    );
-                }}
+                {renderGrid}
             </AutoSizer>
         </div>
       )}
