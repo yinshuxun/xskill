@@ -146,7 +146,7 @@ export function MarketplacePage() {
     );
   }, [deferredQuery, skills]);
 
-  const fetchMarketplace = async (isManualEvent?: React.MouseEvent) => {
+  const fetchMarketplace = useCallback(async (isManualEvent?: any) => {
     // Only show loading if we don't have data yet or if it's a manual refresh
     if (skills.length === 0 || isManualEvent) {
       setLoading(true);
@@ -155,35 +155,53 @@ export function MarketplacePage() {
     setError(null);
     try {
       let data;
+      console.log("Fetching local marketplace data...");
       try {
-        const response = await fetch("/data/marketplace.json");
-        if (!response.ok) throw new Error("Local data not found");
+        const response = await fetch("/data/marketplace.json", { cache: "no-store" });
+        if (!response.ok) throw new Error(`Local data not found: ${response.statusText}`);
         data = await response.json();
-      } catch {
+        console.log("Loaded local data:", Array.isArray(data) ? data.length : "invalid", "items");
+      } catch (localErr) {
+        console.warn("Local fetch failed, trying remote...", localErr);
         const response = await fetch("https://raw.githubusercontent.com/buzhangsan/skills-manager-client/master/public/data/marketplace.json");
+        if (!response.ok) throw new Error(`Remote data fetch failed: ${response.statusText}`);
         data = await response.json();
+        console.log("Loaded remote data:", Array.isArray(data) ? data.length : "invalid", "items");
       }
 
       if (Array.isArray(data)) {
         setSkills(data);
         localStorage.setItem("marketplace_cache", JSON.stringify(data));
       } else {
+        console.error("Invalid data format:", data);
         if (skills.length === 0) {
             setError("Invalid data format received.");
         }
       }
-    } catch {
+    } catch (err: any) {
+      console.error("Marketplace fetch error:", err);
       if (skills.length === 0) {
-        setError("Failed to load marketplace data. Please check your internet connection.");
+        setError(`Failed to load marketplace data: ${err.message || String(err)}`);
       }
     } finally {
       setLoading(false);
     }
-  };
+  }, [skills.length]);
 
   useEffect(() => {
     fetchMarketplace();
-  }, []);
+  }, [fetchMarketplace]);
+
+  // Auto-refresh mechanism (Simulating user click as requested)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+        if (skills.length === 0 && !loading && !error) {
+            console.log("Auto-refreshing marketplace (watchdog)...");
+            fetchMarketplace();
+        }
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [skills.length, loading, error, fetchMarketplace]);
 
   const handleInstall = async (skill: MarketplaceSkill) => {
     setInstallingId(skill.githubUrl);
