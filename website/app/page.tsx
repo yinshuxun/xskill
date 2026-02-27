@@ -246,7 +246,7 @@ export default function Home() {
             {/* CTA */}
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <a
-                href={dmgAsset?.browser_download_url ?? '#'}
+                href="https://github.com/yinshuxun/xskill/releases"
                 className="group relative flex items-center gap-3 px-7 py-3.5 rounded-xl font-semibold text-[15px] bg-gradient-to-b from-emerald-500 to-emerald-600 text-white shadow-[0_0_0_1px_rgba(16,185,129,0.5),0_8px_32px_rgba(16,185,129,0.25)] hover:shadow-[0_0_0_1px_rgba(16,185,129,0.7),0_12px_40px_rgba(16,185,129,0.35)] hover:-translate-y-0.5 transition-all duration-200"
               >
                 <Download className="w-4 h-4" />
@@ -430,7 +430,7 @@ export default function Home() {
                 Free. Local. No account required. Works on Apple Silicon and Intel.
               </p>
               <a
-                href={dmgAsset?.browser_download_url ?? '#'}
+                href="https://github.com/yinshuxun/xskill/releases"
                 className="inline-flex items-center gap-3 px-8 py-3.5 rounded-xl font-semibold bg-gradient-to-b from-emerald-500 to-emerald-600 text-white shadow-[0_0_0_1px_rgba(16,185,129,0.5),0_8px_32px_rgba(16,185,129,0.2)] hover:shadow-[0_0_0_1px_rgba(16,185,129,0.7),0_12px_48px_rgba(16,185,129,0.3)] hover:-translate-y-0.5 transition-all duration-200"
               >
                 <Download className="w-4 h-4" />
