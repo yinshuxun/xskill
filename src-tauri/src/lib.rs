@@ -16,6 +16,7 @@ pub mod scanner;
 pub mod github;
 pub mod suite_manager;
 pub mod suite_applier;
+pub mod test_logger;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {

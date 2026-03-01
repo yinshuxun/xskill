@@ -2,3 +2,7 @@
 # will have compiled files and executables
 /target/
 /gen/schemas
+
+# Test results and reports
+/dist/
+/test-results/

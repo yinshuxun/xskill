@@ -18,25 +18,38 @@ pub fn copy_dir_all(src: &PathBuf, dst: &PathBuf) -> Result<(), String> {
     fs::create_dir_all(dst)
         .map_err(|e| format!("Failed to create dir {}: {}", dst.display(), e))?;
 
-    for entry in WalkDir::new(src).min_depth(1) {
+    const IGNORED_DIRS: &[&str] = &[".git", "node_modules", "dist", "target", "build", ".idea", ".vscode", ".cursor", ".claude", ".codeium", ".gemini", ".copilot", ".config", ".trae", ".kode", ".roo", ".kilocode", ".clawdbot", ".factory", ".qoder", ".mastracode", ".continue", ".opencode", ".adal", ".codex", ".openclaw", ".claude-plugin", ".agent", ".kiro", ".codebuddy", ".pi"];
+
+    for entry in WalkDir::new(src).min_depth(1).follow_links(false) {
         let entry = entry.map_err(|e| format!("Walk error: {}", e))?;
         
-        // Skip .git directories
-        if entry.path().components().any(|c| c.as_os_str() == ".git") {
+        // Skip ignored directories and their contents
+        let path = entry.path();
+        
+        // Check if path or any parent is inside an ignored directory
+        let should_ignore = path.to_string_lossy().split('/')
+            .any(|component| IGNORED_DIRS.contains(&component));
+        
+        if should_ignore {
+            continue;
+        }
+        
+        // Skip directories
+        if path.is_dir() {
             continue;
         }
 
-        let relative = entry.path().strip_prefix(src)
+        let relative = path.strip_prefix(src)
             .map_err(|e| format!("Strip prefix error: {}", e))?;
         let dest_path = dst.join(relative);
 
-        if entry.path().is_dir() {
-            fs::create_dir_all(&dest_path)
-                .map_err(|e| format!("Failed to create dir {}: {}", dest_path.display(), e))?;
-        } else {
-            fs::copy(entry.path(), &dest_path)
-                .map_err(|e| format!("Failed to copy {}: {}", entry.path().display(), e))?;
+        // Check if source file exists before copying
+        if !path.exists() {
+            continue;
         }
+
+        fs::copy(path, &dest_path)
+            .map_err(|e| format!("Failed to copy {}: {}", path.display(), e))?;
     }
     Ok(())
 }

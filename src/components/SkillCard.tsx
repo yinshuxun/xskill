@@ -212,13 +212,13 @@ export function SkillCard({ skill, tools, syncedTools = [], onRefresh, onConfigu
                         </div>
                         <div className="flex gap-1 opacity-60 group-hover/item:opacity-100 transition-opacity shrink-0">
                         <Tooltip content="Copy Skill (Standard)" side="left">
-                            <Button size="icon" variant="ghost" className="h-8 w-8 rounded-lg hover:bg-primary/10 hover:text-primary active:scale-95" disabled={syncing === `${t.key}-copy`} onClick={() => handleSync(t.key, "copy")}>
+                            <Button size="icon" variant="ghost" className={`h-8 w-8 rounded-lg hover:bg-primary/10 hover:text-primary active:scale-95 transition-all ${syncing === `${t.key}-copy` ? "bg-primary/10 text-primary cursor-wait" : ""}`} disabled={syncing === `${t.key}-copy`} onClick={() => handleSync(t.key, "copy")}>
                             <RefreshCw className={`h-3.5 w-3.5 ${syncing === `${t.key}-copy` ? "animate-spin" : ""}`} />
                             </Button>
                         </Tooltip>
                         <Tooltip content="Link Skill (Live Update)" side="left">
-                            <Button size="icon" variant="ghost" className="h-8 w-8 rounded-lg hover:bg-blue-500/10 hover:text-blue-600 active:scale-95" disabled={syncing === `${t.key}-link`} onClick={() => handleSync(t.key, "link")}>
-                            <LinkIcon className="h-3.5 w-3.5" />
+                            <Button size="icon" variant="ghost" className={`h-8 w-8 rounded-lg hover:bg-blue-500/10 hover:text-blue-600 active:scale-95 transition-all ${syncing === `${t.key}-link` ? "bg-blue-500/10 text-blue-600 cursor-wait" : ""}`} disabled={syncing === `${t.key}-link`} onClick={() => handleSync(t.key, "link")}>
+                            <LinkIcon className={`h-3.5 w-3.5 ${syncing === `${t.key}-link` ? "animate-spin" : ""}`} />
                             </Button>
                         </Tooltip>
                         </div>
