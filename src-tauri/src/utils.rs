@@ -18,12 +18,12 @@ pub fn copy_dir_all(src: &PathBuf, dst: &PathBuf) -> Result<(), String> {
     fs::create_dir_all(dst)
         .map_err(|e| format!("Failed to create dir {}: {}", dst.display(), e))?;
 
-    const IGNORED_DIRS: &[&str] = &[".git", "node_modules", "dist", "target", "build", ".idea", ".vscode", ".cursor", ".claude", ".codeium", ".gemini", ".copilot", ".config", ".trae", ".kode", ".roo", ".kilocode", ".clawdbot", ".factory", ".qoder", ".mastracode", ".continue", ".opencode", ".adal", ".codex", ".openclaw", ".claude-plugin", ".agent", ".kiro", ".codebuddy", ".pi"];
+    const IGNORED_DIRS: &[&str] = &["node_modules", "dist", "target", "build", ".idea", ".vscode", ".cursor", ".claude", ".codeium", ".gemini", ".copilot", ".config", ".kode", ".roo", ".kilocode", ".clawdbot", ".factory", ".qoder", ".mastracode", ".continue", ".opencode", ".adal", ".codex", ".openclaw", ".claude-plugin", ".agent", ".kiro", ".codebuddy", ".pi"];
 
     for entry in WalkDir::new(src).min_depth(1).follow_links(false) {
         let entry = entry.map_err(|e| format!("Walk error: {}", e))?;
         
-        // Skip ignored directories and their contents
+        // Skip ignored directories and their contents (but NOT .git)
         let path = entry.path();
         
         // Check if path or any parent is inside an ignored directory
