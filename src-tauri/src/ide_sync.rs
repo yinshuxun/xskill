@@ -8,6 +8,7 @@ fn tool_skills_dir(tool_key: &str) -> Option<PathBuf> {
     let home = crate::utils::get_home_dir()?;
     let subdir = match tool_key {
         "cursor"         => ".cursor/skills",
+        "vscode"         => ".vscode/skills",
         "claude_code"    => ".claude/skills",
         "opencode"       => ".config/opencode/skills",
         "windsurf"       => ".codeium/windsurf/skills",
@@ -34,26 +35,8 @@ fn tool_skills_dir(tool_key: &str) -> Option<PathBuf> {
     Some(home.join(subdir))
 }
 
-
-
-/// Create a symlink at `dst` pointing to `src`.
-/// On macOS/Linux uses `std::os::unix::fs::symlink`.
-#[cfg(unix)]
-fn symlink_dir(src: &PathBuf, dst: &PathBuf) -> Result<(), String> {
-    if dst.exists() || dst.is_symlink() {
-        fs::remove_file(dst)
-            .or_else(|_| fs::remove_dir_all(dst))
-            .map_err(|e| format!("Failed to remove existing target {}: {}", dst.display(), e))?;
-    }
-    if let Some(parent) = dst.parent() {
-        fs::create_dir_all(parent)
-            .map_err(|e| format!("Failed to create parent dir {}: {}", parent.display(), e))?;
-    }
-    std::os::unix::fs::symlink(src, dst)
-        .map_err(|e| format!("Failed to create symlink {} -> {}: {}", dst.display(), src.display(), e))
-}
-
 fn update_claude_desktop_config(skill_name: &str, _dest_path: &PathBuf) -> Result<(), String> {
+
     // Only works on macOS for now
     let home = crate::utils::get_home_dir().ok_or("Could not find home dir")?;
     let config_path = home.join("Library/Application Support/Claude/claude_desktop_config.json");
@@ -134,10 +117,7 @@ pub fn sync_skill(
                 }
 
                 let result = if use_link {
-                    #[cfg(unix)]
-                    { symlink_dir(&src, &dest) }
-                    #[cfg(not(unix))]
-                    { Err("Symlink mode is only supported on macOS/Linux".to_string()) }
+                    crate::utils::symlink_dir(&src, &dest)
                 } else {
                     crate::utils::copy_dir_all(&src, &dest)
                 };

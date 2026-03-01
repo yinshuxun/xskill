@@ -11,7 +11,7 @@ mod tests {
     use crate::skill_manager::{delete_skill, get_all_local_skills};
     use crate::config_manager::{get_skill_config, save_skill_config, SkillConfig};
     use crate::suite_manager::{Suite, load_suites, save_suites};
-    use crate::suite_applier::apply_suite;
+    use crate::suite_applier::{apply_suite, apply_suite_to_agent};
     use crate::git_manager::core_install_skill_from_url;
     use crate::onboarding::{scan_external_skills, import_skills};
     use crate::skill_manager::get_project_skills;
@@ -233,7 +233,7 @@ mod tests {
             };
             
             // apply_suite copies loadout skills from Hub to Project's .cursor/skills
-            let apply_res = apply_suite(project_path.to_string_lossy().to_string(), suite, Some("cursor".to_string()));
+            let apply_res = apply_suite(project_path.to_string_lossy().to_string(), suite, Some("cursor".to_string()), Some("copy".to_string()));
             assert!(apply_res.is_ok(), "Apply suite failed: {:?}", apply_res.err());
 
             // Verify project AGENTS.md exists
@@ -688,7 +688,7 @@ mod tests {
                 loadout_skills: vec!["test-skill".to_string()],
             };
             
-            let apply_res = apply_suite(project_path.to_string_lossy().to_string(), suite, Some("cursor".to_string()));
+            let apply_res = apply_suite(project_path.to_string_lossy().to_string(), suite, Some("cursor".to_string()), Some("copy".to_string()));
             assert!(apply_res.is_ok());
             
             let agents_md_path = project_path.join("AGENTS.md");
@@ -698,6 +698,42 @@ mod tests {
             assert!(synced_skill.exists());
         });
     }
+
+    #[test]
+    fn test_e2e_025_suite_apply_to_agent() {
+        with_test_env("e2e_025", |_, home| {
+            // Setup Hub Skill
+            let hub_skill_dir = home.join(".xskill/skills/agent-skill");
+            fs::create_dir_all(&hub_skill_dir).unwrap();
+            fs::write(hub_skill_dir.join("SKILL.md"), "Agent Skill").unwrap();
+            
+            let suite = Suite {
+                id: "agent_suite".to_string(),
+                name: "Agent Suite".to_string(),
+                description: "Test".to_string(),
+                policy_rules: "".to_string(),
+                loadout_skills: vec!["agent-skill".to_string()],
+            };
+            
+            // Apply to Cursor (Global)
+            let res = apply_suite_to_agent(suite.clone(), "cursor".to_string(), Some("copy".to_string()));
+            assert!(res.is_ok());
+            
+            let cursor_global_skill = home.join(".cursor/skills/agent-skill");
+             assert!(cursor_global_skill.exists());
+             assert!(cursor_global_skill.join("SKILL.md").exists());
+             
+             // Apply to VSCode (Link) - macOS/Linux only
+             #[cfg(unix)]
+             {
+                 let res_link = apply_suite_to_agent(suite.clone(), "vscode".to_string(), Some("link".to_string()));
+                 assert!(res_link.is_ok());
+                 let vscode_global_skill = home.join(".vscode/skills/agent-skill");
+                 assert!(vscode_global_skill.exists());
+                 assert!(vscode_global_skill.is_symlink());
+             }
+         });
+     }
 
     #[test]
     fn test_e2e_016_multi_suite_management() {
@@ -894,6 +930,41 @@ mod tests {
             let md_content = fs::read_to_string(skill_dir.join("SKILL.md")).unwrap();
             assert!(md_content.contains(&skill_name));
             assert!(md_content.contains(&description));
+        });
+    }
+
+    #[test]
+    fn test_e2e_015_import_from_ignored_dir() {
+        with_test_env("e2e_015", |_, home| {
+            // Case: Import a skill from a path that contains an ignored directory name (e.g., .cursor)
+            // The structure is: <project>/.cursor/skills/my-skill
+            let project_path = home.join("project-with-ignored-dir");
+            let skill_dir = project_path.join(".cursor/skills/my-skill");
+            fs::create_dir_all(&skill_dir).unwrap();
+            
+            // Create a file inside the skill directory
+            fs::write(skill_dir.join("SKILL.md"), "My Skill Content").unwrap();
+            fs::write(skill_dir.join("script.py"), "print('hello')").unwrap();
+            
+            // Also create a nested directory to ensure recursion works
+            let nested_dir = skill_dir.join("lib");
+            fs::create_dir_all(&nested_dir).unwrap();
+            fs::write(nested_dir.join("utils.py"), "def foo(): pass").unwrap();
+            
+            // Import to Hub
+            let result = skill_collect_to_hub(skill_dir.to_string_lossy().to_string());
+            assert!(result.is_ok());
+            
+            // Verify files in Hub
+            let hub_skill_dir = home.join(".xskill/skills/my-skill");
+            assert!(hub_skill_dir.exists());
+            assert!(hub_skill_dir.join("SKILL.md").exists(), "SKILL.md should be copied");
+            assert!(hub_skill_dir.join("script.py").exists(), "script.py should be copied");
+            assert!(hub_skill_dir.join("lib/utils.py").exists(), "nested file should be copied");
+            
+            // Verify content
+            let content = fs::read_to_string(hub_skill_dir.join("SKILL.md")).unwrap();
+            assert_eq!(content, "My Skill Content");
         });
     }
 }

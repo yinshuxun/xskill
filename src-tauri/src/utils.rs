@@ -2,6 +2,28 @@ use std::path::PathBuf;
 use std::fs;
 use walkdir::WalkDir;
 
+/// Create a symlink at `dst` pointing to `src`.
+/// On macOS/Linux uses `std::os::unix::fs::symlink`.
+#[cfg(unix)]
+pub fn symlink_dir(src: &PathBuf, dst: &PathBuf) -> Result<(), String> {
+    if dst.exists() || dst.is_symlink() {
+        fs::remove_file(dst)
+            .or_else(|_| fs::remove_dir_all(dst))
+            .map_err(|e| format!("Failed to remove existing target {}: {}", dst.display(), e))?;
+    }
+    if let Some(parent) = dst.parent() {
+        fs::create_dir_all(parent)
+            .map_err(|e| format!("Failed to create parent dir {}: {}", parent.display(), e))?;
+    }
+    std::os::unix::fs::symlink(src, dst)
+        .map_err(|e| format!("Failed to create symlink {} -> {}: {}", dst.display(), src.display(), e))
+}
+
+#[cfg(not(unix))]
+pub fn symlink_dir(_src: &PathBuf, _dst: &PathBuf) -> Result<(), String> {
+    Err("Symlink mode is only supported on macOS/Linux".to_string())
+}
+
 pub fn get_home_dir() -> Option<PathBuf> {
     if let Ok(path) = std::env::var("XSKILL_TEST_HOME") {
         return Some(PathBuf::from(path));
@@ -25,16 +47,17 @@ pub fn copy_dir_all(src: &PathBuf, dst: &PathBuf) -> Result<(), String> {
         
         let path = entry.path();
         
-        // Check if path or any parent is inside an ignored directory
-        let should_ignore = path.to_string_lossy().split('/')
+        let relative = path.strip_prefix(src)
+            .map_err(|e| format!("Strip prefix error: {}", e))?;
+            
+        // Check if relative path or any parent is inside an ignored directory
+        let should_ignore = relative.to_string_lossy().split('/')
             .any(|component| IGNORED_DIRS.contains(&component));
         
         if should_ignore {
             continue;
         }
         
-        let relative = path.strip_prefix(src)
-            .map_err(|e| format!("Strip prefix error: {}", e))?;
         let dest_path = dst.join(relative);
 
         if path.is_dir() {

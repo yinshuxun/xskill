@@ -3,7 +3,7 @@ import { useAppStore, type Project } from "@/hooks/useAppStore";
 import { ApplySuiteDialog } from "@/components/ApplySuiteDialog";
 import { ApplySkillsDialog } from "@/components/ApplySkillsDialog";
 import { ManageProjectSkillsDialog } from "@/components/ManageProjectSkillsDialog";
-import { open } from "@tauri-apps/plugin-dialog";
+import { invoke } from "@tauri-apps/api/core";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -242,7 +242,7 @@ export function ProjectsPage() {
 }
 
 function openProjectFolder(projectPath: string) {
-  open({ directory: true, defaultPath: projectPath }).catch(err => {
+  invoke("open_folder", { path: projectPath }).catch(err => {
     console.error("Failed to open project folder:", err);
   });
 }

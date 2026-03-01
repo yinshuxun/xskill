@@ -7,8 +7,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Layers, Plus, Trash2, Edit, Save, X, BookOpen, Search } from "lucide-react";
+import { Layers, Plus, Trash2, Edit, Save, X, BookOpen, Search, RefreshCw, UploadCloud } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { SyncSuiteDialog } from "@/components/SyncSuiteDialog";
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -24,9 +25,10 @@ const itemVariants = {
 };
 
 export function SuitesPage() {
-  const { suites, saveSuites } = useSuitesStore();
+  const { suites, loading, saveSuites } = useSuitesStore();
   const { skills } = useAppStore();
   const [editingSuite, setEditingSuite] = useState<Suite | Partial<Suite> | null>(null);
+  const [syncingSuite, setSyncingSuite] = useState<Suite | null>(null);
 
   const handleSave = async (suiteToSave: Suite) => {
     let newSuites;
@@ -53,6 +55,15 @@ export function SuitesPage() {
         onSave={handleSave}
         onCancel={() => setEditingSuite(null)}
       />
+    );
+  }
+
+  if (loading && suites.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-32 text-muted-foreground min-h-full">
+        <RefreshCw className="h-6 w-6 animate-spin mb-4 text-primary" />
+        <p className="text-sm font-medium tracking-wide">Loading suites...</p>
+      </div>
     );
   }
 
@@ -110,13 +121,18 @@ export function SuitesPage() {
                       <div className="absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-background to-transparent pointer-events-none" />
                     </div>
                   </CardContent>
-                  <CardFooter className="pt-0 pb-5 px-6 flex justify-between">
-                    <Button variant="ghost" size="sm" onClick={() => setEditingSuite(suite)} className="h-9 rounded-xl hover:bg-primary/10 hover:text-primary transition-colors text-muted-foreground font-medium">
-                      <Edit className="mr-2 h-4 w-4" /> Edit Suite
+                  <CardFooter className="pt-0 pb-5 px-6 flex justify-between gap-2">
+                    <Button variant="outline" size="sm" onClick={() => setSyncingSuite(suite)} className="h-9 flex-1 rounded-xl shadow-sm hover:text-primary hover:border-primary/30 transition-colors font-medium">
+                      <UploadCloud className="mr-2 h-4 w-4" /> Sync
                     </Button>
-                    <Button variant="ghost" size="sm" className="h-9 rounded-xl text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors font-medium" onClick={() => handleDelete(suite.id)}>
-                      <Trash2 className="mr-2 h-4 w-4" /> Delete
-                    </Button>
+                    <div className="flex gap-2">
+                        <Button variant="ghost" size="sm" onClick={() => setEditingSuite(suite)} className="h-9 rounded-xl hover:bg-primary/10 hover:text-primary transition-colors text-muted-foreground font-medium px-3">
+                        <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="sm" className="h-9 rounded-xl text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors font-medium px-3" onClick={() => handleDelete(suite.id)}>
+                        <Trash2 className="h-4 w-4" />
+                        </Button>
+                    </div>
                   </CardFooter>
                 </Card>
               </motion.div>
@@ -124,6 +140,12 @@ export function SuitesPage() {
           </AnimatePresence>
         </motion.div>
       )}
+
+      <SyncSuiteDialog 
+        isOpen={!!syncingSuite} 
+        onClose={() => setSyncingSuite(null)} 
+        suite={syncingSuite} 
+      />
     </div>
   );
 }

@@ -49,6 +49,7 @@ pub fn run() {
             suite_manager::load_suites,
             suite_manager::save_suites,
             suite_applier::apply_suite,
+            suite_applier::apply_suite_to_agent,
             ide_sync::skill_collect_to_hub,
             utils::open_folder,
         ])

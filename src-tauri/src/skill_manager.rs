@@ -32,6 +32,7 @@ pub struct ToolDef {
 pub fn tool_definitions() -> Vec<ToolDef> {
     vec![
         ToolDef { key: "cursor",         display_name: "Cursor",          skills_subdir: ".cursor/skills",                       detect_subdir: ".cursor" },
+        ToolDef { key: "vscode",         display_name: "VS Code",         skills_subdir: ".vscode/skills",                       detect_subdir: ".vscode" },
         ToolDef { key: "claude_code",    display_name: "Claude Code",     skills_subdir: ".claude/skills",                       detect_subdir: ".claude" },
         ToolDef { key: "opencode",       display_name: "OpenCode",        skills_subdir: ".config/opencode/skills",              detect_subdir: ".config/opencode" },
         ToolDef { key: "windsurf",       display_name: "Windsurf",        skills_subdir: ".codeium/windsurf/skills",             detect_subdir: ".codeium/windsurf" },
