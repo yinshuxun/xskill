@@ -11,6 +11,7 @@ fn tool_skills_dir(tool_key: &str) -> Option<PathBuf> {
         "claude_code"    => ".claude/skills",
         "opencode"       => ".config/opencode/skills",
         "windsurf"       => ".codeium/windsurf/skills",
+        "trae"           => ".trae/skills",
         "gemini_cli"     => ".gemini/skills",
         "github_copilot" => ".copilot/skills",
         "amp"            => ".config/agents/skills",

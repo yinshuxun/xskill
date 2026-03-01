@@ -1,0 +1,21 @@
+{
+  "id": "2026-02-28-2",
+  "title": "会话管理系统测试",
+  "participants": [
+    "测试用户"
+  ],
+  "type": "meeting",
+  "startTime": "2026-02-28T05:28:05.990Z",
+  "content": [
+    "测试会话管理系统的核心功能"
+  ],
+  "actions": [
+    {
+      "description": "完善会话记录技能的文档",
+      "assignee": "测试用户",
+      "deadline": "2026-03-01"
+    }
+  ],
+  "references": [],
+  "endTime": "2026-02-28T05:28:25.820Z"
+}

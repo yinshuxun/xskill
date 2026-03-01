@@ -12,7 +12,15 @@
     "test": "vitest run",
     "test:rust": "cd src-tauri && cargo test -- --test-threads=1",
     "test:all": "npm run test && npm run test:rust",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "session": "node .trae/skills/session-manager/scripts/session.js",
+    "session:start": "node .trae/skills/session-manager/scripts/session.js start",
+    "session:add": "node .trae/skills/session-manager/scripts/session.js add",
+    "session:end": "node .trae/skills/session-manager/scripts/session.js end",
+    "session:list": "node .trae/skills/session-manager/scripts/session.js list",
+    "session:search": "node .trae/skills/session-manager/scripts/session.js search",
+    "session:view": "node .trae/skills/session-manager/scripts/session.js view",
+    "work": "node .trae/skills/work-flow/scripts/work.js"
   },
   "dependencies": {
     "@fontsource/geist-sans": "^5.2.5",
