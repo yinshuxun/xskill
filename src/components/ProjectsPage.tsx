@@ -3,11 +3,12 @@ import { useAppStore, type Project } from "@/hooks/useAppStore";
 import { ApplySuiteDialog } from "@/components/ApplySuiteDialog";
 import { ApplySkillsDialog } from "@/components/ApplySkillsDialog";
 import { ManageProjectSkillsDialog } from "@/components/ManageProjectSkillsDialog";
+import { open } from "@tauri-apps/plugin-dialog";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { RefreshCw, FolderSearch, GitBranch, Box, FileText, Layers, Plus, Settings, Search } from "lucide-react";
+import { RefreshCw, FolderSearch, GitBranch, Box, FileText, Layers, Plus, Settings, Search, FolderOpen } from "lucide-react";
 import { FixedSizeGrid as Grid } from "react-window";
 import AutoSizer from "react-virtualized-auto-sizer";
 
@@ -71,6 +72,15 @@ const ProjectCell = ({ columnIndex, rowIndex, style, data }: { columnIndex: numb
         <div className="flex flex-row sm:flex-col gap-2 w-full sm:w-auto mt-4 sm:mt-0 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
             <Button variant="ghost" size="sm" onClick={() => onManage(project)} className="h-8 rounded-lg text-xs justify-start px-3 bg-muted/20 hover:bg-muted/50">
               <Settings className="mr-2 h-3.5 w-3.5" /> Manage
+            </Button>
+            <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => openProjectFolder(project.path)}
+                className="h-8 rounded-lg text-xs justify-start px-3 bg-muted/20 hover:bg-muted/50"
+                title="Open Project Folder"
+            >
+              <FolderOpen className="mr-2 h-3.5 w-3.5" /> Open
             </Button>
             <div className="flex gap-2">
               <Button variant="outline" size="sm" onClick={() => onApplySkills(project)} className="h-8 flex-1 rounded-lg text-xs bg-background shadow-sm hover:text-primary hover:border-primary/30">
@@ -229,4 +239,10 @@ export function ProjectsPage() {
       />
     </div>
   );
+}
+
+function openProjectFolder(projectPath: string) {
+  open({ directory: true, defaultPath: projectPath }).catch(err => {
+    console.error("Failed to open project folder:", err);
+  });
 }

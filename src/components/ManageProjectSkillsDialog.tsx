@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { open } from "@tauri-apps/plugin-dialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, Trash2, FolderOpen, Import } from "lucide-react";
+import { RefreshCw, Trash2, FolderOpen, Import, Folder } from "lucide-react";
 import type { Project, LocalSkill } from "@/hooks/useAppStore";
 
 interface ManageProjectSkillsDialogProps {
@@ -60,7 +61,17 @@ export function ManageProjectSkillsDialog({ isOpen, onClose, project }: ManagePr
     } catch (err) {
       alert(`❌ Import failed: ${err}`);
     } finally {
+      // Minimum 1s animation effect
+      await new Promise(resolve => setTimeout(resolve, 1000));
       setImportingPath(null);
+    }
+  };
+
+  const handleOpenFolder = async (skillPath: string) => {
+    try {
+      await open({ directory: true, defaultPath: skillPath });
+    } catch (err) {
+      console.error("Failed to open folder:", err);
     }
   };
 
@@ -148,6 +159,15 @@ export function ManageProjectSkillsDialog({ isOpen, onClose, project }: ManagePr
                                     ) : (
                                         <Trash2 className="h-4 w-4" />
                                     )}
+                                </Button>
+                                <Button 
+                                    variant="ghost" 
+                                    size="icon" 
+                                    className="text-muted-foreground hover:text-primary shrink-0"
+                                    onClick={() => handleOpenFolder(skill.path)}
+                                    title="Open Skill Folder"
+                                >
+                                    <Folder className="h-4 w-4" />
                                 </Button>
                             </div>
                         </div>

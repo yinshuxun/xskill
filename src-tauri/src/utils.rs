@@ -23,7 +23,6 @@ pub fn copy_dir_all(src: &PathBuf, dst: &PathBuf) -> Result<(), String> {
     for entry in WalkDir::new(src).min_depth(1).follow_links(false) {
         let entry = entry.map_err(|e| format!("Walk error: {}", e))?;
         
-        // Skip ignored directories and their contents (but NOT .git)
         let path = entry.path();
         
         // Check if path or any parent is inside an ignored directory
@@ -34,22 +33,22 @@ pub fn copy_dir_all(src: &PathBuf, dst: &PathBuf) -> Result<(), String> {
             continue;
         }
         
-        // Skip directories
-        if path.is_dir() {
-            continue;
-        }
-
         let relative = path.strip_prefix(src)
             .map_err(|e| format!("Strip prefix error: {}", e))?;
         let dest_path = dst.join(relative);
 
-        // Check if source file exists before copying
-        if !path.exists() {
-            continue;
-        }
+        if path.is_dir() {
+            fs::create_dir_all(&dest_path)
+                .map_err(|e| format!("Failed to create dir {}: {}", dest_path.display(), e))?;
+        } else if path.is_file() {
+            // Check if source file exists before copying
+            if !path.exists() {
+                continue;
+            }
 
-        fs::copy(path, &dest_path)
-            .map_err(|e| format!("Failed to copy {}: {}", path.display(), e))?;
+            fs::copy(path, &dest_path)
+                .map_err(|e| format!("Failed to copy {}: {}", path.display(), e))?;
+        }
     }
     Ok(())
 }
