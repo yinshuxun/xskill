@@ -50,6 +50,11 @@
 * **原因**: `sticky` 定位的元素是相对于其最近的**滚动祖先**（scrolling ancestor）进行定位的。如果使用了 `top-[-40px]` 试图修正视觉位置，会导致元素吸附在视口之外。同时，父容器的 `overflow` 属性会影响 sticky 的生效范围。
 * **修复经验**: 确保 `sticky` 元素的 `top` 值是视口内的有效值（如 `top-0`）。如果父容器有 padding，需要注意 sticky 元素会吸附在 content box 的边缘，可能需要配合负 margin (`-mt`) 来抵消 padding 的影响，或者调整 DOM 结构将 sticky 元素置于 padding 之外。
 
+### 9. WalkDir 遍历软链根目录陷阱
+* **Bug 场景**: 当用户试图同步一个本身是软链的 Skill 目录（如 `~/.xskill/skills/my-skill -> ~/dev/my-skill`）时，`copy_dir_all` 静默失败，目标目录为空。
+* **原因**: Rust 的 `walkdir` 库在 `follow_links(false)` 模式下，如果传入的 `root` 本身是一个软链，它会认为这是一个文件（Symlink）而不是目录，从而不进入遍历，直接返回 0 个子项（或仅返回 root 本身）。
+* **修复经验**: 在调用 `WalkDir::new(src)` 之前，必须先检查 `src` 是否为软链。如果是，必须使用 `fs::canonicalize(src)` 解析出真实的物理路径，再将解析后的路径传给 `WalkDir`。
+
 ---
 
 ## 🎨 二、借助云端 Skill 进行架构与审美升维
