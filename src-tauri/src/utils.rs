@@ -42,12 +42,19 @@ pub fn copy_dir_all(src: &PathBuf, dst: &PathBuf) -> Result<(), String> {
 
     const IGNORED_DIRS: &[&str] = &["node_modules", "dist", "target", "build", ".idea", ".vscode", ".cursor", ".claude", ".codeium", ".gemini", ".copilot", ".config", ".kode", ".roo", ".kilocode", ".clawdbot", ".factory", ".qoder", ".mastracode", ".continue", ".opencode", ".adal", ".codex", ".openclaw", ".claude-plugin", ".agent", ".kiro", ".codebuddy", ".pi"];
 
-    for entry in WalkDir::new(src).min_depth(1).follow_links(false) {
+    // Resolve symlinks in source path to ensure WalkDir works correctly
+    let src_path = if src.is_symlink() {
+        fs::canonicalize(src).map_err(|e| format!("Failed to canonicalize src {}: {}", src.display(), e))?
+    } else {
+        src.clone()
+    };
+
+    for entry in WalkDir::new(&src_path).min_depth(1).follow_links(false) {
         let entry = entry.map_err(|e| format!("Walk error: {}", e))?;
         
         let path = entry.path();
         
-        let relative = path.strip_prefix(src)
+        let relative = path.strip_prefix(&src_path)
             .map_err(|e| format!("Strip prefix error: {}", e))?;
             
         // Check if relative path or any parent is inside an ignored directory
@@ -139,4 +146,30 @@ pub fn get_system_proxy() -> Option<String> {
         }
     }
     None
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tempfile::TempDir;
+    use std::fs;
+
+    #[test]
+    #[cfg(unix)]
+    fn test_copy_dir_all_symlink_src() {
+        let temp_dir = TempDir::new().unwrap();
+        let real_src = temp_dir.path().join("real_src");
+        let symlink_src = temp_dir.path().join("symlink_src");
+        let dst = temp_dir.path().join("dst");
+
+        fs::create_dir_all(&real_src).unwrap();
+        fs::write(real_src.join("file.txt"), "content").unwrap();
+
+        std::os::unix::fs::symlink(&real_src, &symlink_src).unwrap();
+
+        // This call used to fail (copy nothing) because WalkDir didn't follow the root symlink
+        copy_dir_all(&symlink_src, &dst).unwrap();
+
+        assert!(dst.join("file.txt").exists(), "file.txt should be copied even if src is symlink");
+    }
 }
