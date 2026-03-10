@@ -33,6 +33,81 @@ mod tests {
         env::remove_var("XSKILL_TEST_HOME");
     }
 
+    #[test]
+    fn test_e2e_016_project_agent_md_discovery() {
+        with_test_env("e2e_016", |_, home| {
+            // Setup project structure
+            let project_path = home.join("project-with-agent-md");
+            fs::create_dir_all(&project_path).unwrap();
+
+            // 1. Create a skill deeply nested with AGENT.md
+            let nested_skill_dir = project_path.join("src/features/my-agent");
+            fs::create_dir_all(&nested_skill_dir).unwrap();
+            fs::write(nested_skill_dir.join("AGENT.md"), "---\nname: my-agent-skill\ndescription: Discovered via AGENT.md\n---\nAgent Content").unwrap();
+
+            // 2. Create another skill with SKILL.md in a custom folder
+            let custom_skill_dir = project_path.join("custom-skills/my-skill");
+            fs::create_dir_all(&custom_skill_dir).unwrap();
+            fs::write(custom_skill_dir.join("SKILL.md"), "---\nname: my-custom-skill\ndescription: Discovered via SKILL.md\n---\nSkill Content").unwrap();
+
+            // 3. Create a skill inside an ignored directory (should NOT be discovered)
+            let ignored_skill_dir = project_path.join("node_modules/ignored-skill");
+            fs::create_dir_all(&ignored_skill_dir).unwrap();
+            fs::write(ignored_skill_dir.join("AGENT.md"), "Should be ignored").unwrap();
+
+            // Scan project skills
+            let skills = get_project_skills(project_path.to_string_lossy().to_string()).unwrap();
+
+            // Verify
+            assert!(skills.iter().any(|s| s.name == "my-agent-skill"), "Should discover my-agent-skill via AGENT.md");
+            assert!(skills.iter().any(|s| s.name == "my-custom-skill"), "Should discover my-custom-skill via SKILL.md");
+            assert!(!skills.iter().any(|s| s.path.contains("node_modules")), "Should NOT discover skills in node_modules");
+
+            let agent_skill = skills.iter().find(|s| s.name == "my-agent-skill").unwrap();
+            assert_eq!(agent_skill.description, "Discovered via AGENT.md");
+            assert_eq!(agent_skill.path, nested_skill_dir.to_string_lossy().to_string());
+        });
+    }
+
+    #[test]
+    fn test_e2e_017_quoted_skill_metadata() {
+        with_test_env("e2e_017", |_, home| {
+            // Case 17: Skill metadata with quotes should be parsed correctly
+            let skill_dir = home.join(".xskill/skills/quoted-skill");
+            fs::create_dir_all(&skill_dir).unwrap();
+            
+            // Write SKILL.md with quoted values
+            let content = r#"---
+name: "quoted-name"
+description: 'quoted description'
+---
+Content"#;
+            fs::write(skill_dir.join("SKILL.md"), content).unwrap();
+
+            // Verify parsing
+            let skills = get_all_local_skills().unwrap();
+            let skill = skills.iter().find(|s| s.path.contains("quoted-skill")).expect("Should find quoted skill");
+            
+            assert_eq!(skill.name, "quoted-name", "Should strip double quotes from name");
+            assert_eq!(skill.description, "quoted description", "Should strip single quotes from description");
+            
+            // Verify sync works with this skill (simulating CLI behavior by passing path)
+            let sync_res = sync_skill(skill.path.clone(), vec!["cursor".to_string()], Some("copy".to_string()));
+            assert!(sync_res.is_ok(), "Should sync successfully with clean name");
+            
+            // Verify target directory name is clean
+            let cursor_skill = home.join(".cursor/skills/quoted-name"); // Name from metadata is used for destination?
+            // Wait, sync_skill uses src.file_name() as destination name, NOT metadata name.
+            // Let's check sync_skill implementation again.
+            // "let skill_name = src.file_name()...to_string();"
+            // So if directory is "quoted-skill", destination will be "quoted-skill".
+            // The metadata name is only for display/ID.
+            
+            let dest_dir = home.join(".cursor/skills/quoted-skill");
+            assert!(dest_dir.exists(), "Should sync to directory matching source folder name");
+        });
+    }
+
     fn run_test_with_logging<F>(test_name: &str, f: F)
     where
         F: FnOnce(&mut TestLogger),

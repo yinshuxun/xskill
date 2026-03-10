@@ -1,6 +1,6 @@
 use std::path::Path;
 use std::process::Command;
-use crate::skill_manager::CENTRAL_SKILLS_DIR;
+use crate::skill_manager::{CENTRAL_SKILLS_DIR, core_update_skill_metadata};
 use tauri::{Emitter, Window};
 
 fn git_cmd() -> Command {
@@ -57,6 +57,11 @@ where
     }
     
     core_clone_skill(repo_url, &target_dir_str, progress).await?;
+    
+    // Update skill metadata with original URL
+    if let Err(e) = core_update_skill_metadata(&target_dir, Some(repo_url.to_string()), None) {
+        eprintln!("Failed to save skill metadata: {}", e);
+    }
     
     Ok(target_dir_str)
 }

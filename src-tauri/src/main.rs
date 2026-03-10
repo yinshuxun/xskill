@@ -86,7 +86,7 @@ fn handle_sync_all() {
     // 3. Sync each skill
     // We could optimize this to sync all skills to one tool at a time, but reusing sync_skill is easier
     for skill in &skills {
-        if let Err(e) = ide_sync::sync_skill(skill.name.clone(), installed_tools.clone(), Some("copy".to_string())) {
+        if let Err(e) = ide_sync::sync_skill(skill.path.clone(), installed_tools.clone(), Some("copy".to_string())) {
             eprintln!("Failed to sync skill '{}': {}", skill.name, e);
         }
     }

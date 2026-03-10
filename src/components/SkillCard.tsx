@@ -4,11 +4,15 @@ import { Card, CardHeader, CardTitle, CardDescription, CardFooter, CardContent }
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Wrench, RefreshCw, Link as LinkIcon, ArrowUpCircle, Trash2, Check, Copy, FolderOpen, Eye, FileText } from "lucide-react";
+import { Wrench, RefreshCw, Link as LinkIcon, ArrowUpCircle, Trash2, Check, Copy, FolderOpen, Eye, FileText, ExternalLink, Pencil, X, Save } from "lucide-react";
 import { Tooltip } from "@/components/ui/tooltip-simple";
 import { AgentIcons } from "@/components/ui/icons";
 import type { LocalSkill, Tool } from "@/hooks/useAppStore";
 import { motion } from "framer-motion";
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import { Input } from "@/components/ui/input";
+import 'github-markdown-css/github-markdown.css';
 
 interface SkillCardProps {
   skill: LocalSkill;
@@ -23,6 +27,28 @@ export function SkillCard({ skill, tools, syncedTools = [], onRefresh, onConfigu
   const [showSyncDialog, setShowSyncDialog] = useState(false);
   const [copied, setCopied] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [isEditingRemark, setIsEditingRemark] = useState(false);
+  const [remarkInput, setRemarkInput] = useState("");
+
+  const handleEditRemark = () => {
+    setRemarkInput(skill.remark || "");
+    setIsEditingRemark(true);
+  };
+
+  const handleSaveRemark = async () => {
+    try {
+        await invoke("update_skill_metadata", {
+            path: skill.path,
+            originalUrl: null,
+            remark: remarkInput
+        });
+        setIsEditingRemark(false);
+        onRefresh();
+    } catch (err) {
+        console.error("Failed to update remark:", err);
+        alert(`Failed to update remark: ${err}`);
+    }
+  };
 
   const handleCopyPath = () => {
     navigator.clipboard.writeText(skill.path);
@@ -99,7 +125,14 @@ export function SkillCard({ skill, tools, syncedTools = [], onRefresh, onConfigu
         <CardHeader className="pb-3 px-6 pt-6">
           <div className="flex justify-between items-start gap-2">
             <div className="space-y-1.5">
-              <CardTitle className="text-lg font-semibold tracking-tight text-foreground/90">{skill.name}</CardTitle>
+              <Tooltip content="Click to view details">
+                <CardTitle 
+                  className="text-lg font-semibold tracking-tight text-foreground/90 cursor-pointer hover:text-primary transition-colors"
+                  onClick={() => setShowPreview(true)}
+                >
+                  {skill.name}
+                </CardTitle>
+              </Tooltip>
               <Badge variant="outline" className={`text-[10px] h-5 px-2 font-medium tracking-wide rounded-full ${tierColor}`}>
                 {tier} Skill
               </Badge>
@@ -231,7 +264,7 @@ export function SkillCard({ skill, tools, syncedTools = [], onRefresh, onConfigu
     </Dialog>
 
     <Dialog open={showPreview} onOpenChange={setShowPreview}>
-      <DialogContent className="max-w-[66vw] w-full h-[85vh] flex flex-col p-0 overflow-hidden">
+      <DialogContent className="max-w-[80vw] min-w-[980px] w-full h-[85vh] flex flex-col p-0 overflow-hidden">
         <DialogHeader className="px-6 py-4 border-b shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <FileText className="h-5 w-5 text-muted-foreground" />
@@ -244,12 +277,57 @@ export function SkillCard({ skill, tools, syncedTools = [], onRefresh, onConfigu
         
         <div className="flex-1 overflow-hidden flex flex-col gap-6 p-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 shrink-0">
-            <div className="space-y-2">
-              <h4 className="text-sm font-medium leading-none text-muted-foreground">Description</h4>
-              <p className="text-sm leading-relaxed text-foreground/90">
-                {skill.description || "No description provided."}
-              </p>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <h4 className="text-sm font-medium leading-none text-muted-foreground">Description</h4>
+                <p className="text-sm leading-relaxed text-foreground/90">
+                  {skill.description || "No description provided."}
+                </p>
+              </div>
+
+              {skill.original_url && (
+                <div className="space-y-2">
+                  <h4 className="text-sm font-medium leading-none text-muted-foreground flex items-center gap-2">
+                    Original Repository <ExternalLink className="h-3 w-3" />
+                  </h4>
+                  <a href={skill.original_url} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline break-all block">
+                    {skill.original_url}
+                  </a>
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                    <h4 className="text-sm font-medium leading-none text-muted-foreground">My Remark</h4>
+                    {!isEditingRemark && (
+                        <Button variant="ghost" size="icon" className="h-5 w-5" onClick={handleEditRemark}>
+                            <Pencil className="h-3 w-3" />
+                        </Button>
+                    )}
+                </div>
+                {isEditingRemark ? (
+                    <div className="flex gap-2">
+                        <Input 
+                            value={remarkInput} 
+                            onChange={(e) => setRemarkInput(e.target.value)} 
+                            className="h-8 text-xs" 
+                            placeholder="Add a remark..."
+                        />
+                        <Button size="icon" className="h-8 w-8" onClick={handleSaveRemark}>
+                            <Save className="h-3 w-3" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setIsEditingRemark(false)}>
+                            <X className="h-3 w-3" />
+                        </Button>
+                    </div>
+                ) : (
+                    <p className="text-sm text-foreground/90 italic">
+                        {skill.remark || "No remark added."}
+                    </p>
+                )}
+              </div>
             </div>
+
             <div className="space-y-2">
               <h4 className="text-sm font-medium leading-none text-muted-foreground">Path</h4>
               <div className="rounded-md bg-muted/50 p-2.5 font-mono text-xs break-all select-all border border-border/50">
@@ -266,12 +344,12 @@ export function SkillCard({ skill, tools, syncedTools = [], onRefresh, onConfigu
               </span>
               <Badge variant="secondary" className="text-[10px] h-5 px-2">Markdown</Badge>
             </div>
-            <div className="flex-1 overflow-y-auto bg-zinc-50/50 dark:bg-zinc-950/50 scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent">
-              <div className="p-6">
+            <div className="flex-1 overflow-y-auto bg-white dark:bg-[#0d1117] scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent">
+              <div className="p-8 markdown-body" style={{ backgroundColor: 'transparent' }}>
                 {skill.content ? (
-                  <pre className="text-sm font-mono whitespace-pre-wrap leading-relaxed text-foreground/80 selection:bg-primary/20 selection:text-primary">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
                     {skill.content}
-                  </pre>
+                  </ReactMarkdown>
                 ) : (
                   <div className="flex flex-col items-center justify-center py-20 text-muted-foreground gap-3">
                     <FileText className="h-10 w-10 opacity-20" />

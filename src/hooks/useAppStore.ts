@@ -10,6 +10,8 @@ export interface LocalSkill {
   disable_model_invocation: boolean;
   allowed_tools: string[];
   content: string;
+  original_url?: string;
+  remark?: string;
 }
 
 export interface Tool {

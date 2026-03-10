@@ -145,15 +145,16 @@ export function MarketplacePage() {
 
   const filteredSkills = useMemo(() => {
     const query = deferredQuery.toLowerCase();
-    return skills.filter(
-      (skill) =>
-        skill.name.toLowerCase().includes(query) ||
-        skill.description.toLowerCase().includes(query) ||
-        skill.author.toLowerCase().includes(query)
-    );
-  }, [deferredQuery, skills]);
+    if (!query) return skills;
 
-  const fetchMarketplace = useCallback(async (isManualEvent?: any) => {
+    return skills.filter(skill => 
+      skill.name.toLowerCase().includes(query) || 
+      (skill.description || "").toLowerCase().includes(query) ||
+      (skill.tags || []).some(tag => tag.toLowerCase().includes(query))
+    );
+  }, [skills, deferredQuery]);
+
+  const fetchMarketplace = useCallback(async (isManualEvent?: unknown) => {
     // Only show loading if we don't have data yet or if it's a manual refresh
     if (skills.length === 0 || isManualEvent) {
       setLoading(true);
@@ -185,10 +186,11 @@ export function MarketplacePage() {
             setError("Invalid data format received.");
         }
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Marketplace fetch error:", err);
       if (skills.length === 0) {
-        setError(`Failed to load marketplace data: ${err.message || String(err)}`);
+        const message = err instanceof Error ? err.message : String(err);
+        setError(`Failed to load marketplace data: ${message}`);
       }
     } finally {
       setLoading(false);

@@ -42,9 +42,11 @@ export function MySkillsPage({ skills, loading, onRefresh, tools, onConfigure }:
     );
 
     if (agent) {
-      if (searchQuery && !skill.name.toLowerCase().includes(searchQuery.toLowerCase()) && 
-          !skill.description.toLowerCase().includes(searchQuery.toLowerCase())) {
-        return;
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase();
+        const nameMatch = skill.name.toLowerCase().includes(query);
+        const descMatch = (skill.description || "").toLowerCase().includes(query);
+        if (!nameMatch && !descMatch) return;
       }
 
       const existing = skillGroups.get(skill.name);

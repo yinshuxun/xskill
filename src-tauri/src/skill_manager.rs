@@ -19,6 +19,8 @@ pub struct LocalSkill {
     pub disable_model_invocation: bool,
     pub allowed_tools: Vec<String>,
     pub content: String,
+    pub original_url: Option<String>,
+    pub remark: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -61,11 +63,53 @@ pub fn skills_dir_for_tool(def: &ToolDef) -> Result<PathBuf, String> {
     Ok(home.join(def.skills_subdir))
 }
 
-fn parse_skill_md(raw: &str, fallback_name: &str) -> (String, String, bool, Vec<String>, String) {
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SkillMeta {
+    pub original_url: Option<String>,
+    pub remark: Option<String>,
+}
+
+pub fn read_skill_meta(path: &PathBuf) -> Option<SkillMeta> {
+    let meta_path = if path.is_file() {
+        path.parent()?.join(".xskill-meta.json")
+    } else {
+        path.join(".xskill-meta.json")
+    };
+    
+    if meta_path.exists() {
+        if let Ok(content) = fs::read_to_string(&meta_path) {
+            return serde_json::from_str(&content).ok();
+        }
+    }
+    None
+}
+
+pub fn write_skill_meta(path: &PathBuf, meta: &SkillMeta) -> Result<(), String> {
+    let meta_path = if path.is_file() {
+        path.parent().ok_or("Invalid path")?.join(".xskill-meta.json")
+    } else {
+        path.join(".xskill-meta.json")
+    };
+    
+    let content = serde_json::to_string_pretty(meta).map_err(|e| e.to_string())?;
+    fs::write(&meta_path, content).map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+fn parse_skill_md(raw: &str, fallback_name: &str, skill_path: &PathBuf) -> (String, String, bool, Vec<String>, String, Option<String>, Option<String>) {
     let mut name = fallback_name.to_string();
     let mut description = String::new();
     let mut disable_model_invocation = false;
     let mut allowed_tools: Vec<String> = Vec::new();
+    let mut original_url: Option<String> = None;
+    let mut remark: Option<String> = None;
+    
+    // First try to load from .xskill-meta.json
+    if let Some(meta) = read_skill_meta(skill_path) {
+        original_url = meta.original_url;
+        remark = meta.remark;
+    }
+
     let content;
     let trimmed = raw.trim();
     if let Some(after_open) = trimmed.strip_prefix("---") {
@@ -76,9 +120,9 @@ fn parse_skill_md(raw: &str, fallback_name: &str) -> (String, String, bool, Vec<
             for line in frontmatter.lines() {
                 let line = line.trim();
                 if let Some(val) = line.strip_prefix("name:") {
-                    name = val.trim().to_string();
+                    name = val.trim().trim_matches('"').trim_matches('\'').to_string();
                 } else if let Some(val) = line.strip_prefix("description:") {
-                    description = val.trim().to_string();
+                    description = val.trim().trim_matches('"').trim_matches('\'').to_string();
                 } else if let Some(val) = line.strip_prefix("disable-model-invocation:") {
                     disable_model_invocation = val.trim() == "true";
                 } else if let Some(val) = line.strip_prefix("allowed-tools:") {
@@ -88,6 +132,16 @@ fn parse_skill_md(raw: &str, fallback_name: &str) -> (String, String, bool, Vec<
                         .map(|s| s.trim().to_string())
                         .filter(|s| !s.is_empty())
                         .collect();
+                } else if let Some(val) = line.strip_prefix("original-url:") {
+                    // Only use frontmatter if meta file didn't provide it
+                    if original_url.is_none() {
+                        original_url = Some(val.trim().to_string());
+                    }
+                } else if let Some(val) = line.strip_prefix("remark:") {
+                    // Only use frontmatter if meta file didn't provide it
+                    if remark.is_none() {
+                        remark = Some(val.trim().to_string());
+                    }
                 }
             }
         } else {
@@ -96,7 +150,71 @@ fn parse_skill_md(raw: &str, fallback_name: &str) -> (String, String, bool, Vec<
     } else {
         content = raw.to_string();
     }
-    (name, description, disable_model_invocation, allowed_tools, content)
+    (name, description, disable_model_invocation, allowed_tools, content, original_url, remark)
+}
+
+fn scan_project_skills_recursively(dir: &PathBuf, skills: &mut Vec<LocalSkill>, depth: usize) {
+    if depth > 5 { return; } // Prevent too deep recursion
+
+    let entries = match fs::read_dir(dir) {
+        Ok(e) => e,
+        Err(_) => return,
+    };
+
+    // Common ignored directories
+    let ignored_dirs = [
+        ".git", "node_modules", "target", "dist", "build", "out", 
+        ".next", ".vscode", ".idea", ".DS_Store", "coverage", 
+        "__pycache__", ".venv", "venv", ".cursor", ".claude", ".xskill"
+    ];
+
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if path.is_dir() {
+            let dir_name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
+            
+            if ignored_dirs.contains(&dir_name) {
+                continue;
+            }
+
+            // Check for AGENT.md or SKILL.md
+            let agent_md = path.join("AGENT.md");
+            let skill_md = path.join("SKILL.md");
+            
+            let found_md = if agent_md.exists() {
+                Some(agent_md)
+            } else if skill_md.exists() {
+                Some(skill_md)
+            } else {
+                None
+            };
+
+            if let Some(md_path) = found_md {
+                // Found a skill!
+                if let Ok(raw) = fs::read_to_string(&md_path) {
+                    let (name, description, disable_model_invocation, allowed_tools, content, original_url, remark) =
+                        parse_skill_md(&raw, dir_name, &path);
+                    
+                    skills.push(LocalSkill {
+                        name,
+                        description,
+                        path: path.to_string_lossy().to_string(),
+                        tool_key: "project_local".to_string(),
+                        disable_model_invocation,
+                        allowed_tools,
+                        content,
+                        original_url,
+                        remark,
+                    });
+                }
+                // Don't recurse into a skill directory
+                continue; 
+            }
+
+            // Recurse
+            scan_project_skills_recursively(&path, skills, depth + 1);
+        }
+    }
 }
 
 pub fn read_skills_from_dir(skills_dir: &PathBuf, tool_key: &str) -> Vec<LocalSkill> {
@@ -118,8 +236,8 @@ pub fn read_skills_from_dir(skills_dir: &PathBuf, tool_key: &str) -> Vec<LocalSk
                         .and_then(|n| n.to_str())
                         .unwrap_or("unknown")
                         .to_string();
-                    let (name, description, disable_model_invocation, allowed_tools, content) =
-                        parse_skill_md(&raw, &dir_name);
+                    let (name, description, disable_model_invocation, allowed_tools, content, original_url, remark) =
+                        parse_skill_md(&raw, &dir_name, &path);
                     skills.push(LocalSkill {
                         name,
                         description,
@@ -128,6 +246,8 @@ pub fn read_skills_from_dir(skills_dir: &PathBuf, tool_key: &str) -> Vec<LocalSk
                         disable_model_invocation,
                         allowed_tools,
                         content,
+                        original_url,
+                        remark,
                     });
                 }
             } else {
@@ -145,6 +265,8 @@ pub fn read_skills_from_dir(skills_dir: &PathBuf, tool_key: &str) -> Vec<LocalSk
                         disable_model_invocation: false,
                         allowed_tools: vec![],
                         content: String::new(),
+                        original_url: None,
+                        remark: None,
                     });
                 }
             }
@@ -156,8 +278,8 @@ pub fn read_skills_from_dir(skills_dir: &PathBuf, tool_key: &str) -> Vec<LocalSk
                         .and_then(|n| n.to_str())
                         .unwrap_or("unknown")
                         .to_string();
-                    let (name, description, disable_model_invocation, allowed_tools, content) =
-                        parse_skill_md(&raw, &file_stem);
+                    let (name, description, disable_model_invocation, allowed_tools, content, original_url, remark) =
+                        parse_skill_md(&raw, &file_stem, &path);
 
                     let skill_path = path.parent()
                         .map(|p| p.to_string_lossy().to_string())
@@ -170,6 +292,8 @@ pub fn read_skills_from_dir(skills_dir: &PathBuf, tool_key: &str) -> Vec<LocalSk
                         disable_model_invocation,
                         allowed_tools,
                         content,
+                        original_url,
+                        remark,
                     });
                 }
             }
@@ -246,6 +370,10 @@ pub fn get_project_skills(project_path: String) -> Result<Vec<LocalSkill>, Strin
         }
     }
     
+    // 2. New logic: Recursively scan for AGENT.md / SKILL.md in the project
+    // This covers the user's requirement: "只要这个项目下某一个目录存在 AGENT.md，我就能读到"
+    scan_project_skills_recursively(&project_path_buf, &mut skills, 0);
+
     // Deduplicate by path
     skills.sort_by(|a, b| a.path.cmp(&b.path));
     skills.dedup_by(|a, b| a.path == b.path);
@@ -281,4 +409,30 @@ pub fn get_all_local_skills() -> Result<Vec<LocalSkill>, String> {
     all_skills.dedup_by(|a, b| a.path == b.path);
 
     Ok(all_skills)
+}
+
+pub fn core_update_skill_metadata(path: &PathBuf, original_url: Option<String>, remark: Option<String>) -> Result<(), String> {
+    // 1. Try to read existing meta
+    let mut meta = read_skill_meta(path).unwrap_or(SkillMeta {
+        original_url: None,
+        remark: None,
+    });
+    
+    // 2. Update fields if provided
+    if original_url.is_some() {
+        meta.original_url = original_url;
+    }
+    if remark.is_some() {
+        meta.remark = remark;
+    }
+    
+    // 3. Write back to .xskill-meta.json
+    write_skill_meta(path, &meta)?;
+    
+    Ok(())
+}
+
+#[tauri::command]
+pub fn update_skill_metadata(path: String, original_url: Option<String>, remark: Option<String>) -> Result<(), String> {
+    core_update_skill_metadata(&PathBuf::from(path), original_url, remark)
 }

@@ -34,11 +34,22 @@ const itemVariants = {
 export function HubPage({ skills, loading, onRefresh, tools, onConfigure, onImport, onNewSkill }: HubPageProps) {
   const [searchQuery, setSearchQuery] = useState("");
 
-  const hubSkills = skills.filter(
-    (s) => (s.path.includes(".xskill/hub") || s.path.includes(".xskill/skills")) &&
-           (s.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-            s.description.toLowerCase().includes(searchQuery.toLowerCase()))
-  ); 
+  const hubSkills = skills.filter((s) => {
+    // 1. Path check
+    const isHubSkill = s.path.includes(".xskill/hub") || s.path.includes(".xskill/skills");
+    if (!isHubSkill) return false;
+
+    // 2. Search check
+    if (!searchQuery) return true;
+    
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return true;
+
+    const nameMatch = s.name.toLowerCase().includes(query);
+    const descMatch = (s.description || "").toLowerCase().includes(query);
+    
+    return nameMatch || descMatch;
+  }); 
 
   const installedTools = tools.filter((t) => t.installed);
 
@@ -56,7 +67,7 @@ export function HubPage({ skills, loading, onRefresh, tools, onConfigure, onImpo
                 <Search className="absolute left-3.5 top-3 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
                 <Input 
                     placeholder="Search skills..." 
-                    className="pl-10 h-10 bg-background/50 border-border/50 rounded-xl shadow-sm focus-visible:ring-primary/20 transition-all"
+                    className="pl-10 h-10 bg-background/50 border-border/50 rounded-xl shadow-sm focus-visible:ring-1 focus-visible:ring-offset-0 transition-all"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                 />
@@ -102,9 +113,9 @@ export function HubPage({ skills, loading, onRefresh, tools, onConfigure, onImpo
         animate="show"
         className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6"
       >
-        <AnimatePresence mode="popLayout">
+        <AnimatePresence>
           {hubSkills.map((skill) => (
-            <motion.div key={skill.path} variants={itemVariants} layoutId={skill.path}>
+            <motion.div key={skill.path} variants={itemVariants} layout="position">
               <SkillCard
                 skill={skill}
                 tools={tools}
