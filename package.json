@@ -1,7 +1,8 @@
 {
   "name": "xskill",
   "private": true,
-  "version": "0.5.8",
+  "version": "0.6.0",
+  "description": "Cross-Platform Agent Skills Hub",
   "type": "module",
   "scripts": {
     "dev": "vite",

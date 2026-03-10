@@ -1,7 +1,7 @@
 [package]
 name = "xskill"
-version = "0.5.8"
-description = "A Tauri App"
+version = "0.6.0"
+description = "XSkill"
 authors = ["you"]
 license = ""
 repository = ""
