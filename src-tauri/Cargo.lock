@@ -5359,7 +5359,7 @@ dependencies = [
 
 [[package]]
 name = "xskill"
-version = "0.5.7"
+version = "0.5.8"
 dependencies = [
  "clap",
  "dirs",
