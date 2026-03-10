@@ -32,6 +32,7 @@ pub fn get_home_dir() -> Option<PathBuf> {
 }
 
 pub fn copy_dir_all(src: &PathBuf, dst: &PathBuf) -> Result<(), String> {
+    println!("Starting copy_dir_all from {:?} to {:?}", src, dst);
     if dst.exists() || dst.is_symlink() {
         fs::remove_file(dst)
             .or_else(|_| fs::remove_dir_all(dst))
@@ -40,7 +41,8 @@ pub fn copy_dir_all(src: &PathBuf, dst: &PathBuf) -> Result<(), String> {
     fs::create_dir_all(dst)
         .map_err(|e| format!("Failed to create dir {}: {}", dst.display(), e))?;
 
-    const IGNORED_DIRS: &[&str] = &["node_modules", "dist", "target", "build", ".idea", ".vscode", ".cursor", ".claude", ".codeium", ".gemini", ".copilot", ".config", ".kode", ".roo", ".kilocode", ".clawdbot", ".factory", ".qoder", ".mastracode", ".continue", ".opencode", ".adal", ".codex", ".openclaw", ".claude-plugin", ".agent", ".kiro", ".codebuddy", ".pi"];
+    // Reduced ignored list to prevent accidental filtering of valid skill content
+    const IGNORED_DIRS: &[&str] = &["node_modules", ".git", ".idea", ".vscode", ".DS_Store", "__pycache__"];
 
     // Resolve symlinks in source path to ensure WalkDir works correctly
     let src_path = if src.is_symlink() {
@@ -48,6 +50,8 @@ pub fn copy_dir_all(src: &PathBuf, dst: &PathBuf) -> Result<(), String> {
     } else {
         src.clone()
     };
+    
+    println!("Resolved src_path: {:?}", src_path);
 
     for entry in WalkDir::new(&src_path).min_depth(1).follow_links(false) {
         let entry = entry.map_err(|e| format!("Walk error: {}", e))?;
@@ -62,6 +66,7 @@ pub fn copy_dir_all(src: &PathBuf, dst: &PathBuf) -> Result<(), String> {
             .any(|component| IGNORED_DIRS.contains(&component));
         
         if should_ignore {
+            // println!("Ignoring {:?}", relative);
             continue;
         }
         
@@ -78,8 +83,10 @@ pub fn copy_dir_all(src: &PathBuf, dst: &PathBuf) -> Result<(), String> {
 
             fs::copy(path, &dest_path)
                 .map_err(|e| format!("Failed to copy {}: {}", path.display(), e))?;
+            println!("Copied {:?} to {:?}", path, dest_path);
         }
     }
+    println!("Finished copy_dir_all");
     Ok(())
 }
 

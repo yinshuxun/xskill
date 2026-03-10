@@ -171,5 +171,13 @@ pub fn skill_collect_to_hub(skill_dir: String) -> Result<String, String> {
 
     crate::utils::copy_dir_all(&src, &hub_dir).map_err(|e| e.to_string())?;
 
+    // Check if the hub directory is empty (or only contains ignored files/dirs, effectively empty)
+    if let Ok(entries) = fs::read_dir(&hub_dir) {
+        if entries.count() == 0 {
+            let _ = fs::remove_dir_all(&hub_dir);
+            return Err(format!("Imported skill directory is empty. Check if the source directory contains valid content: {:?}", src));
+        }
+    }
+
     Ok(hub_dir.to_string_lossy().to_string())
 }

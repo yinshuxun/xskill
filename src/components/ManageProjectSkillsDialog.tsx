@@ -54,6 +54,7 @@ export function ManageProjectSkillsDialog({ isOpen, onClose, project }: ManagePr
   };
 
   const handleImport = async (skill: LocalSkill) => {
+    console.log("Importing skill from:", skill.path);
     setImportingPath(skill.path);
     try {
       await invoke("skill_collect_to_hub", { skillDir: skill.path });
@@ -69,9 +70,10 @@ export function ManageProjectSkillsDialog({ isOpen, onClose, project }: ManagePr
 
   const handleOpenFolder = async (skillPath: string) => {
     try {
-      await open({ directory: true, defaultPath: skillPath });
+      await invoke("open_folder", { path: skillPath });
     } catch (err) {
       console.error("Failed to open folder:", err);
+      alert(`Failed to open folder: ${err}`);
     }
   };
 

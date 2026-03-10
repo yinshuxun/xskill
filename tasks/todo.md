@@ -145,6 +145,33 @@ This document tracks the development progress of XSkill.
 
 ---
 
+## [2026-03-10] v0.5.8 修复与优化
+
+**参与者**: AI Assistant
+**时间**: [Current Time]
+**类型**: #bugfix / #release
+
+**核心内容**:
+- 修复了 Hub 页面搜索框清空后列表为空的问题。
+- 修复了 `xskill sync --all` 命令处理带引号 Skill 名称时的路径错误。
+- 增强了 Project Skill 发现机制，支持递归扫描 `AGENT.md`。
+- 修复了 Manage Project Skills 对话框中 "Open" 按钮失效的问题。
+- 修复了从 Project 导入 Skill 到 Hub 时可能创建空目录的问题（优化了忽略列表）。
+- 修复了将 Skill 添加到 Project 时创建空目录的问题（增强了源目录查找逻辑）。
+
+**行动项**:
+- [x] 修复 Hub 搜索 Bug
+- [x] 修复 CLI Sync 引号问题
+- [x] 实现递归 AGENT.md 扫描
+- [x] 修复 Open 按钮
+- [x] 修复 Import/Add 空目录问题
+- [x] 发布 v0.5.8
+
+**参考资料**:
+- 相关代码修改: `src/components/HubPage.tsx`, `src-tauri/src/skill_manager.rs`, `src-tauri/src/suite_applier.rs`, `src-tauri/src/utils.rs`, `src-tauri/src/ide_sync.rs`
+
+---
+
 ## 会话记录 (Session Logs)
 
 
